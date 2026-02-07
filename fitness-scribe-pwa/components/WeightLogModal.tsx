@@ -50,61 +50,72 @@ const WeightLogModal: React.FC<WeightLogModalProps> = ({ currentUserId, isOpen, 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-scale-in">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                        <Scale className="w-5 h-5 mr-2 text-indigo-500" />
-                        Log Body Stats
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-sm p-8 shadow-2xl shadow-indigo-100 animate-scale-in ring-1 ring-slate-100">
+                <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl font-bold text-slate-900 flex items-center tracking-tight">
+                        <Scale className="w-6 h-6 mr-3 text-indigo-500 fill-indigo-500" />
+                        Log Stats
                     </h3>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5 text-gray-500" />
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+                        <X className="w-5 h-5 text-slate-400" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={weight}
-                            onChange={(e) => setWeight(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
-                            placeholder="e.g. 75.5"
-                            required
-                        />
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Weight (kg)</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={weight}
+                                onChange={(e) => setWeight(e.target.value)}
+                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-lg text-slate-900 placeholder:text-slate-300"
+                                placeholder="0.0"
+                                required
+                            />
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">KG</span>
+                        </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Waist (cm)</label>
-                        <input
-                            type="number"
-                            step="0.1"
-                            value={waist}
-                            onChange={(e) => setWaist(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
-                            placeholder="e.g. 80"
-                        />
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Waist (cm)</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={waist}
+                                onChange={(e) => setWaist(e.target.value)}
+                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-lg text-slate-900 placeholder:text-slate-300"
+                                placeholder="0.0"
+                            />
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">CM</span>
+                        </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Notes</label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
+                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-900 placeholder:text-slate-300 resize-none"
                             placeholder="How do you feel?"
-                            rows={3}
+                            rows={2}
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={saving}
-                        className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-colors flex items-center justify-center"
+                        className="w-full bg-indigo-600 active:bg-indigo-700 text-white py-4 rounded-[20px] font-bold text-lg shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all transform active:scale-[0.98] mt-2"
                     >
-                        {saving ? 'Saving...' : 'Save Log'}
+                        {saving ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Saving...
+                            </span>
+                        ) : 'Save Log'}
                     </button>
                 </form>
             </div>

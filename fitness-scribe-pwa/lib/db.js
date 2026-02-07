@@ -18,3 +18,23 @@ db.version(3).stores({
   meals: '++id, date, user_id',
   body_stats: '++id, date, user_id'
 });
+
+db.version(4).stores({
+  workouts: '++id, date, synced, user_id, morning_hiit_completed, evening_walk_minutes',
+  meals: '++id, date, user_id',
+  body_stats: '++id, date, user_id'
+});
+
+db.version(5).stores({
+  sugar_logs: '++id, date, user_id, type, is_late_night',
+  workouts: '++id, date, synced, user_id, morning_hiit_completed, evening_walk_minutes',
+  meals: '++id, date, user_id',
+  body_stats: '++id, date, user_id'
+});
+
+db.version(6).stores({
+  sugar_logs: '++id, date, user_id, type, is_late_night, synced',
+  workouts: '++id, date, synced, user_id, morning_hiit_completed, evening_walk_minutes',
+  meals: '++id, date, user_id, synced',
+  body_stats: '++id, date, user_id, synced'
+});

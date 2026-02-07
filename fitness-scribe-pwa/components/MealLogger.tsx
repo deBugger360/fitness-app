@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import planData from '@/fitness_plan.json';
-import { Save, Coffee, Utensils } from 'lucide-react';
+import { Save, Coffee, Utensils, Zap, Clock } from 'lucide-react';
 
 interface MealLoggerProps {
     currentUserId: number | null;
@@ -13,7 +13,16 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
     const [lunch, setLunch] = useState<{ protein: string, carb: string, veg: string }>({ protein: '', carb: '', veg: '' });
     const [dinner, setDinner] = useState<{ protein: string, carb: string, veg: string }>({ protein: '', carb: '', veg: '' });
     const [greenTeaCups, setGreenTeaCups] = useState(0);
+    const [ifCompliant, setIfCompliant] = useState(false);
     const [isSaved, setIsSaved] = useState(false);
+
+    // Quick Combos for common Nigerian meals
+    const quickCombos = [
+        { name: "Beans & Plantain", p: "beans", c: "plantain", v: "vegetables" },
+        { name: "Yam & Eggs", p: "eggs", c: "yam", v: "vegetables" },
+        { name: "Potato & Fish Stew", p: "fish", c: "potatoes", v: "spinach" },
+        { name: "Chicken & Salad", p: "chicken", c: "", v: "cabbage" }
+    ];
 
     // Load existing data for today
     useEffect(() => {
@@ -27,17 +36,21 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
 
             if (log) {
                 setGreenTeaCups(log.green_tea_cups || 0);
-                // Simple parsing if saved as string previously, or just empty if new
-                // Ideally schema matches, but for now we treat the select boxes as the "builder"
-                // and the saved string as the result. 
-                // We won't parse back the string into the complex object for this simple demo 
-                // unless we stored it structurally. 
-                // For this demo, simply letting users log 'new' meals for the day or overwriting works 
-                // to show the 'Entry System' capabilities. 
+                setIfCompliant(log.if_compliant || false);
+                // Parsing logic could go here if we wanted to restore dropdowns from string
+                // But for "Speed" we prioritize new entry unless complex logic added. 
             }
         };
         loadToday();
     }, [currentUserId]);
+
+    const handleQuickAdd = (type: 'lunch' | 'dinner', combo: any) => {
+        if (type === 'lunch') {
+            setLunch({ protein: combo.p, carb: combo.c, veg: combo.v });
+        } else {
+            setDinner({ protein: combo.p, carb: combo.c, veg: combo.v });
+        }
+    };
 
     const handleSave = async () => {
         if (!currentUserId) return;
@@ -52,20 +65,25 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
                 .and(item => item.user_id === currentUserId)
                 .first();
 
+            const payload: any = {
+                user_id: currentUserId,
+                date: today,
+                green_tea_cups: greenTeaCups,
+                if_compliant: ifCompliant
+            };
+
+            // Only overwrite meal strings if user actually selected something
+            if (lunchStr.length > 6) payload.lunch = lunchStr;
+            if (dinnerStr.length > 6) payload.dinner = dinnerStr;
+
             if (existing) {
-                await db.table('meals').update(existing.id, {
-                    lunch: lunchStr.length > 6 ? lunchStr : existing.lunch, // Only update if actually selected
-                    dinner: dinnerStr.length > 6 ? dinnerStr : existing.dinner,
-                    green_tea_cups: greenTeaCups
-                });
+                await db.table('meals').update(existing.id, payload);
             } else {
                 await db.table('meals').add({
-                    user_id: currentUserId,
-                    date: today,
-                    lunch: lunchStr.length > 6 ? lunchStr : '',
-                    dinner: dinnerStr.length > 6 ? dinnerStr : '',
-                    water_liters: 0, // preserved by specific water logger typically, but initializing here if new row
-                    green_tea_cups: greenTeaCups
+                    ...payload,
+                    lunch: payload.lunch || '',
+                    dinner: payload.dinner || '',
+                    water_liters: 0 // handled by WaterCounter
                 });
             }
             setIsSaved(true);
@@ -76,14 +94,14 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
     };
 
     const MealSelect = ({ label, value, onChange, options }: any) => (
-        <div className="mb-2">
+        <div className="mb-2 w-full">
             <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</label>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full mt-1 p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-700 outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full mt-1 p-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-green-500"
             >
-                <option value="">Select {label}...</option>
+                <option value="">Select...</option>
                 {options.map((opt: string) => (
                     <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>
                 ))}
@@ -93,55 +111,72 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
 
     return (
         <div className="space-y-6">
-            {/* Lunch Section */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                <div className="flex items-center mb-4 text-gray-800">
-                    <Utensils className="w-5 h-5 mr-2 text-orange-500" />
-                    <h3 className="font-bold">Log Lunch</h3>
+            {/* IF Compliance - High Priority */}
+            <div className={`p-4 rounded-3xl border flex items-center justify-between cursor-pointer transition-colors ${ifCompliant ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-100'}`}
+                onClick={() => setIfCompliant(!ifCompliant)}
+            >
+                <div className="flex items-center">
+                    <div className={`p-2 rounded-full mr-3 ${ifCompliant ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
+                        <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h3 className={`font-bold ${ifCompliant ? 'text-purple-900' : 'text-gray-700'}`}>Fasting Goal</h3>
+                        <p className="text-xs text-gray-500">12:00 PM - 6:00 PM Window</p>
+                    </div>
                 </div>
-                <MealSelect
-                    label="Protein"
-                    options={planData.meal_options.proteins}
-                    value={lunch.protein}
-                    onChange={(v: string) => setLunch(prev => ({ ...prev, protein: v }))}
-                />
-                <MealSelect
-                    label="Carbs"
-                    options={planData.meal_options.carbs}
-                    value={lunch.carb}
-                    onChange={(v: string) => setLunch(prev => ({ ...prev, carb: v }))}
-                />
-                <MealSelect
-                    label="Vegetables"
-                    options={planData.meal_options.vegetables}
-                    value={lunch.veg}
-                    onChange={(v: string) => setLunch(prev => ({ ...prev, veg: v }))}
-                />
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${ifCompliant ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
+                    {ifCompliant && <Save className="w-3 h-3 text-white" />}
+                </div>
             </div>
 
-            {/* Dinner Section */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+            {/* Quick Logging Section */}
+            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
                 <div className="flex items-center mb-4 text-gray-800">
-                    <h3 className="font-bold">Log Dinner</h3>
+                    <Utensils className="w-5 h-5 mr-2 text-orange-500" />
+                    <h3 className="font-bold">Meal Log</h3>
                 </div>
-                <MealSelect
-                    label="Protein"
-                    options={planData.meal_options.proteins}
-                    value={dinner.protein}
-                    onChange={(v: string) => setDinner(prev => ({ ...prev, protein: v }))}
-                />
-                <MealSelect
-                    label="Carbs"
-                    options={planData.meal_options.carbs}
-                    value={dinner.carb}
-                    onChange={(v: string) => setDinner(prev => ({ ...prev, carb: v }))}
-                />
-                <MealSelect
-                    label="Vegetables"
-                    options={planData.meal_options.vegetables}
-                    value={dinner.veg}
-                    onChange={(v: string) => setDinner(prev => ({ ...prev, veg: v }))}
-                />
+
+                {/* Lunch Tab */}
+                <div className="mb-6">
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Lunch</label>
+                    <div className="flex overflow-x-auto space-x-2 pb-2 mb-2 no-scrollbar">
+                        {quickCombos.map((combo) => (
+                            <button
+                                key={combo.name}
+                                onClick={() => handleQuickAdd('lunch', combo)}
+                                className="whitespace-nowrap px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium border border-orange-100 hover:bg-orange-100"
+                            >
+                                + {combo.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <MealSelect label="Protein" options={planData.meal_options.proteins} value={lunch.protein} onChange={(v: string) => setLunch({ ...lunch, protein: v })} />
+                        <MealSelect label="Carb" options={planData.meal_options.carbs} value={lunch.carb} onChange={(v: string) => setLunch({ ...lunch, carb: v })} />
+                        <MealSelect label="Veg" options={planData.meal_options.vegetables} value={lunch.veg} onChange={(v: string) => setLunch({ ...lunch, veg: v })} />
+                    </div>
+                </div>
+
+                {/* Dinner Tab */}
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Dinner</label>
+                    <div className="flex overflow-x-auto space-x-2 pb-2 mb-2 no-scrollbar">
+                        {quickCombos.map((combo) => (
+                            <button
+                                key={combo.name}
+                                onClick={() => handleQuickAdd('dinner', combo)}
+                                className="whitespace-nowrap px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium border border-orange-100 hover:bg-orange-100"
+                            >
+                                + {combo.name}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        <MealSelect label="Protein" options={planData.meal_options.proteins} value={dinner.protein} onChange={(v: string) => setDinner({ ...dinner, protein: v })} />
+                        <MealSelect label="Carb" options={planData.meal_options.carbs} value={dinner.carb} onChange={(v: string) => setDinner({ ...dinner, carb: v })} />
+                        <MealSelect label="Veg" options={planData.meal_options.vegetables} value={dinner.veg} onChange={(v: string) => setDinner({ ...dinner, veg: v })} />
+                    </div>
+                </div>
             </div>
 
             {/* Green Tea Section */}
@@ -181,7 +216,7 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
                 ) : (
                     <>
                         <Save className="w-5 h-5 mr-2" />
-                        Save Daily Log
+                        Save Nutrition Log
                     </>
                 )}
             </button>

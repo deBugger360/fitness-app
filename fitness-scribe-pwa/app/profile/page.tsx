@@ -38,26 +38,26 @@ export default function ProfilePage() {
     }, []);
 
     return (
-        <div className="pb-24 px-6 pt-10 min-h-screen bg-white">
-            <header className="mb-8 flex items-center">
-                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-4">
-                    <User className="w-8 h-8" />
+        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
+            <header className="mb-10 flex flex-col items-center justify-center text-center">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-100 to-white flex items-center justify-center text-indigo-600 mb-4 shadow-lg shadow-indigo-100 border-4 border-white">
+                    <User className="w-10 h-10" />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{user?.name || "Guest User"}</h1>
-                    <p className="text-gray-500">{user?.age || 28} years old • {user?.height_cm || 175}cm</p>
+                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{user?.name || "Guest User"}</h1>
+                    <p className="text-slate-500 font-medium mt-1">{user?.age || '--'} years old • {user?.height_cm || '--'}cm</p>
                 </div>
             </header>
 
             {/* Goals Section */}
-            <section className="mb-8">
-                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <Target className="w-5 h-5 mr-2 text-red-500" />
-                    Active Goals
+            <section className="mb-6 bg-white p-6 rounded-[24px] shadow-sm border border-slate-100">
+                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center">
+                    <Target className="w-4 h-4 mr-2" />
+                    Active Focus
                 </h2>
                 <div className="flex flex-wrap gap-2">
                     {planData.profile.goals.map((goal) => (
-                        <span key={goal} className="px-4 py-2 bg-red-50 text-red-600 rounded-full text-sm font-medium capitalize">
+                        <span key={goal} className="px-4 py-2 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold capitalize border border-slate-100 shadow-sm">
                             {goal.replace(/_/g, ' ')}
                         </span>
                     ))}
@@ -65,28 +65,45 @@ export default function ProfilePage() {
             </section>
 
             {/* Sync Status Section */}
-            <section className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
+            <section className="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm relative overflow-hidden">
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-12 -mt-12 opacity-50 ${pendingSyncs > 0 ? 'bg-orange-50' : 'bg-green-50'}`}></div>
+
+                <div className="flex items-center justify-between mb-3 relative z-10">
                     <div className="flex items-center">
-                        <RefreshCw className={`w-5 h-5 mr-3 ${pendingSyncs > 0 ? 'text-orange-500 animate-spin' : 'text-green-500'}`} />
-                        <h3 className="font-bold text-gray-800">Sync Status</h3>
+                        <div className={`p-2 rounded-lg mr-3 ${pendingSyncs > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                            <RefreshCw className={`w-5 h-5 ${pendingSyncs > 0 ? 'animate-spin' : ''}`} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900">Cloud Sync</h3>
+                            <p className="text-xs text-slate-400 font-medium mt-0.5">
+                                {pendingSyncs > 0 ? 'Syncing...' : 'Last synced just now'}
+                            </p>
+                        </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold ${pendingSyncs > 0 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
-                        }`}>
-                        {pendingSyncs > 0 ? 'Pending Uploads' : 'All Synced'}
-                    </span>
                 </div>
-                <p className="text-sm text-gray-500 ml-8">
-                    {pendingSyncs} records waiting to reach the cloud.
-                </p>
+
+                <div className={`mt-2 p-3 rounded-xl text-xs font-medium flex items-center justify-between ${pendingSyncs > 0 ? 'bg-orange-50 text-orange-700' : 'bg-green-50 text-green-700'}`}>
+                    <span>{pendingSyncs > 0 ? `${pendingSyncs} items pending` : 'All systems operational'}</span>
+                    {pendingSyncs === 0 && <span className="text-lg">✨</span>}
+                </div>
             </section>
 
             {/* Version Info */}
+            {/* Version Info & Credits */}
             <div className="mt-12 text-center">
-                <p className="text-xs text-gray-300 flex items-center justify-center">
-                    <Smartphone className="w-3 h-3 mr-1" />
-                    ScribeFit PWA v0.1.0
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2 opacity-50">
+                    Fitness Scribe v0.1.0
                 </p>
+                <a
+                    href="https://www.linkedin.com/in/churchill-emmanuel-130725130/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block"
+                >
+                    <p className="text-xs text-slate-400 font-medium hover:text-indigo-600 transition-colors">
+                        Designed & Built by <span className="font-bold text-slate-500 hover:text-indigo-700">Churchill Emmanuel</span>
+                    </p>
+                </a>
             </div>
         </div>
     );
