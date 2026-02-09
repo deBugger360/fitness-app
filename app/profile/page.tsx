@@ -37,15 +37,32 @@ export default function ProfilePage() {
         fetchProfile();
     }, []);
 
+
     return (
         <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
-            <header className="mb-10 flex flex-col items-center justify-center text-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-100 to-white flex items-center justify-center text-indigo-600 mb-4 shadow-lg shadow-indigo-100 border-4 border-white">
-                    <User className="w-10 h-10" />
+            <header className="mb-8 flex flex-col items-center justify-center text-center relative">
+                <div className="w-28 h-28 rounded-full bg-slate-200 mb-4 shadow-xl shadow-indigo-100 border-4 border-white overflow-hidden relative">
+                    {user?.photo ? (
+                        <img src={user.photo} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-white flex items-center justify-center text-indigo-600">
+                            <span className="text-3xl font-bold">{user?.name?.charAt(0) || <User className="w-10 h-10" />}</span>
+                        </div>
+                    )}
                 </div>
-                <div>
-                    <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{user?.name || "Guest User"}</h1>
-                    <p className="text-slate-500 font-medium mt-1">{user?.age || '--'} years old • {user?.height_cm || '--'}cm</p>
+
+                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{user?.name || "Guest User"}</h1>
+                <p className="text-slate-500 font-medium mt-1">
+                    {user?.age || '--'} years • {user?.height_cm || '--'}cm • {user?.gender || 'Human'}
+                </p>
+
+                <div className="mt-4 flex gap-2 justify-center">
+                    <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-wide border border-indigo-100">
+                        {user?.activity_level || 'Unknown Activity'}
+                    </span>
+                    <a href="/onboarding" className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold hover:bg-slate-200 transition-colors">
+                        Edit Profile
+                    </a>
                 </div>
             </header>
 
@@ -56,7 +73,7 @@ export default function ProfilePage() {
                     Active Focus
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                    {planData.profile.goals.map((goal) => (
+                    {(user?.goals && user.goals.length > 0 ? user.goals : planData.profile.goals).map((goal: string) => (
                         <span key={goal} className="px-4 py-2 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold capitalize border border-slate-100 shadow-sm">
                             {goal.replace(/_/g, ' ')}
                         </span>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/db";
 import { Check, Droplets, Trophy, Flame } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import WorkoutCard from "@/components/WorkoutCard";
 import FastingTimer from "@/components/FastingTimer";
@@ -14,29 +15,25 @@ import { usePersonalizedPlan } from "@/hooks/usePersonalizedPlan";
 export default function Dashboard() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
+  const router = useRouter(); // Need to import useRouter at top
 
   useEffect(() => {
     const initUser = async () => {
-      let userId = 1;
       try {
         const user = await db.table('users').limit(1).first();
-        if (user) {
-          userId = user.id;
+        if (user && user.onboarded) {
+          setCurrentUserId(user.id);
         } else {
-          userId = await db.table('users').add({
-            name: 'Default Athlete',
-            age: 28,
-            height_cm: 175,
-            weight_kg: 75
-          }) as number;
+          // No user or partial user -> Go to onboarding
+          // We do NOT create Default Athlete anymore.
+          router.push('/onboarding');
         }
-        setCurrentUserId(userId);
       } catch (err) {
         console.error("Error initializing user:", err);
       }
     };
     initUser();
-  }, []);
+  }, [router]);
 
   const { plan: workoutData, loading } = usePersonalizedPlan(currentUserId);
 

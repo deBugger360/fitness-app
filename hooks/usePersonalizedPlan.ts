@@ -46,14 +46,34 @@ export function usePersonalizedPlan(currentUserId: number | null) {
             let level = "Beginner";
             let streak = 0;
             let repMultiplier = 1.0;
+            let waterTarget = planData.profile.water_liters_per_day; // Default base
+            let fastingWindow = planData.profile.fasting_window; // Default base
 
             if (currentUserId) {
-                // Fetch last 14 days of history
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - 14);
-
                 try {
+                    // Fetch User Profile
+                    const user = await db.table('users').get(currentUserId);
+
+                    if (user) {
+                        // Calculate Water Goal: Weight (kg) * 0.033 + Activity Buffer
+                        let calculatedWater = (user.weight_kg || 75) * 0.033;
+                        if (user.activity_level === 'active') calculatedWater += 0.5;
+                        if (user.activity_level === 'very_active') calculatedWater += 1.0;
+                        waterTarget = parseFloat(calculatedWater.toFixed(1));
+
+                        // Adjust Fasting Window based on Goals
+                        if (user.goals && user.goals.includes('fat_loss')) {
+                            fastingWindow = "16:8"; // Stricter for fat loss
+                        } else if (user.goals && (user.goals.includes('strength') || user.goals.includes('stamina'))) {
+                            fastingWindow = "14:10"; // More fueling time for performance
+                        }
+                    }
+
+                    // Fetch last 14 days of history
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(endDate.getDate() - 14);
+
                     const history = await db.table('workouts')
                         .where('date')
                         .between(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
@@ -62,10 +82,12 @@ export function usePersonalizedPlan(currentUserId: number | null) {
 
                     // Calculate consistency
                     const workoutCount = history.filter(h => h.morning_hiit_completed === 1).length;
-                    if (workoutCount > 8) {
+
+                    // Level logic: Combine frequency + self-reported activity
+                    if (workoutCount > 8 || (user?.activity_level === 'active' && workoutCount > 5)) {
                         level = "Advanced";
                         repMultiplier = 1.5;
-                    } else if (workoutCount > 4) {
+                    } else if (workoutCount > 4 || user?.activity_level === 'moderate') {
                         level = "Intermediate";
                         repMultiplier = 1.2;
                     }
@@ -111,8 +133,8 @@ export function usePersonalizedPlan(currentUserId: number | null) {
                 day: dayName,
                 workoutType,
                 exercises: processedExercises,
-                fastingWindow: planData.profile.fasting_window,
-                waterTarget: planData.profile.water_liters_per_day,
+                fastingWindow,
+                waterTarget,
                 level,
                 streak
             });
