@@ -8,11 +8,15 @@ import DietAnalysisModal from "@/components/DietAnalysisModal";
 import { Sparkles, Utensils } from "lucide-react";
 
 import DietScoreCard from "@/components/DietScoreCard";
+import { usePersonalizedPlan } from "@/hooks/usePersonalizedPlan";
 
 export default function MealsPage() {
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [isDietModalOpen, setIsDietModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+
+    // Use the hook to get dynamic goals (water, fasting window)
+    const { plan } = usePersonalizedPlan(currentUserId);
 
     useEffect(() => {
         const initUser = async () => {
@@ -47,7 +51,7 @@ export default function MealsPage() {
             <DietScoreCard key={refreshKey} currentUserId={currentUserId} />
 
             <div className="mb-8">
-                <WaterCounter currentUserId={currentUserId} waterGoal={3} />
+                <WaterCounter currentUserId={currentUserId} waterGoal={plan?.waterTarget || 3} />
             </div>
 
             <section className="bg-white dark:bg-slate-900 rounded-[24px] p-6 shadow-sm dark:shadow-none border border-slate-100 dark:border-slate-800 mb-8 relative overflow-hidden transition-colors duration-300">
