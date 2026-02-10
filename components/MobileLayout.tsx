@@ -21,9 +21,9 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 flex justify-center items-center">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex justify-center items-center transition-colors duration-300">
             {/* Mobile Container */}
-            <div className="w-full max-w-[500px] h-screen max-h-screen bg-white shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-slate-900/5">
+            <div className="w-full max-w-[500px] h-screen max-h-screen bg-white dark:bg-slate-950 shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-slate-900/5 dark:ring-slate-800 transition-colors duration-300">
 
                 {/* Main Content Area */}
                 <main className="flex-1 overflow-y-auto scrollbar-hide pb-2">
@@ -31,7 +31,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 </main>
 
                 {/* Bottom Navigation */}
-                <nav className="h-[88px] pb-5 bg-white/90 backdrop-blur-md border-t border-slate-100 flex justify-around items-center shrink-0 z-50 px-2 transition-all">
+                <nav className="h-[88px] pb-5 bg-white/90 dark:bg-slate-950/80 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 flex justify-around items-center shrink-0 z-50 px-2 transition-all duration-300">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = pathname === tab.href;
@@ -40,11 +40,13 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                             <Link
                                 key={tab.name}
                                 href={tab.href}
-                                className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 tap-highlight-transparent group rounded-2xl mx-1 max-h-[64px] ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 tap-highlight-transparent group rounded-2xl mx-1 max-h-[64px] ${isActive
+                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20'
+                                        : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
                                     }`}
                             >
                                 <div className={`mb-1 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100 group-hover:scale-105'}`}>
-                                    <Icon className={`w-6 h-6 ${isActive ? 'fill-indigo-600 text-indigo-600' : 'text-current'}`} strokeWidth={isActive ? 2.5 : 2} />
+                                    <Icon className={`w-6 h-6 ${isActive ? 'fill-indigo-600 dark:fill-indigo-400 text-indigo-600 dark:text-indigo-400' : 'text-current'}`} strokeWidth={isActive ? 2.5 : 2} />
                                 </div>
                                 <span className={`text-[10px] font-bold tracking-wide ${isActive ? 'opacity-100 font-semibold' : 'opacity-80'}`}>{tab.name}</span>
                             </Link>

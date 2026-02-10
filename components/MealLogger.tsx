@@ -95,19 +95,19 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
 
     const MealSelect = ({ label, value, onChange, options }: any) => (
         <div className="mb-3 w-full relative group">
-            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1.5 block ml-1">{label}</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1.5 block ml-1 transition-colors duration-300">{label}</label>
             <div className="relative">
                 <select
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full appearance-none p-3 pr-10 bg-slate-50 rounded-2xl border-2 border-slate-100 text-slate-900 font-bold text-sm outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer group-hover:border-slate-200"
+                    className="w-full appearance-none p-3 pr-10 bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-slate-100 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-sm outline-none focus:border-indigo-500 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 transition-all cursor-pointer group-hover:border-slate-200 dark:group-hover:border-slate-600"
                 >
-                    <option value="" className="text-slate-400">Select...</option>
+                    <option value="" className="text-slate-400 dark:text-slate-500">Select...</option>
                     {options.map((opt: string) => (
-                        <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>
+                        <option key={opt} value={opt} className="dark:bg-slate-800">{opt.replace(/_/g, ' ')}</option>
                     ))}
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500 transition-colors duration-300">
                     <ChevronDown className="w-5 h-5" />
                 </div>
             </div>
@@ -117,39 +117,39 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
     return (
         <div className="space-y-6">
             {/* IF Compliance - High Priority */}
-            <div className={`p-4 rounded-3xl border flex items-center justify-between cursor-pointer transition-colors ${ifCompliant ? 'bg-purple-50 border-purple-200' : 'bg-white border-gray-100'}`}
+            <div className={`p-4 rounded-3xl border flex items-center justify-between cursor-pointer transition-all duration-300 ${ifCompliant ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50' : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800'}`}
                 onClick={() => setIfCompliant(!ifCompliant)}
             >
                 <div className="flex items-center">
-                    <div className={`p-2 rounded-full mr-3 ${ifCompliant ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
+                    <div className={`p-2 rounded-full mr-3 transition-colors duration-300 ${ifCompliant ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300' : 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500'}`}>
                         <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className={`font-bold ${ifCompliant ? 'text-purple-900' : 'text-gray-700'}`}>Fasting Goal</h3>
-                        <p className="text-xs text-gray-500">12:00 PM - 6:00 PM Window</p>
+                        <h3 className={`font-bold transition-colors duration-300 ${ifCompliant ? 'text-purple-900 dark:text-purple-100' : 'text-gray-700 dark:text-slate-300'}`}>Fasting Goal</h3>
+                        <p className="text-xs text-gray-500 dark:text-slate-500 transition-colors duration-300">12:00 PM - 6:00 PM Window</p>
                     </div>
                 </div>
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${ifCompliant ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${ifCompliant ? 'bg-purple-600 border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'border-gray-300 dark:border-slate-600'}`}>
                     {ifCompliant && <Save className="w-3 h-3 text-white" />}
                 </div>
             </div>
 
             {/* Quick Logging Section */}
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-                <div className="flex items-center mb-4 text-gray-800">
-                    <Utensils className="w-5 h-5 mr-2 text-orange-500" />
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
+                <div className="flex items-center mb-4 text-gray-800 dark:text-white transition-colors duration-300">
+                    <Utensils className="w-5 h-5 mr-2 text-orange-500 dark:text-orange-400" />
                     <h3 className="font-bold">Meal Log</h3>
                 </div>
 
                 {/* Lunch Tab */}
                 <div className="mb-6">
-                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Lunch</label>
+                    <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-2 block transition-colors duration-300">Lunch</label>
                     <div className="flex overflow-x-auto space-x-2 pb-2 mb-2 no-scrollbar">
                         {quickCombos.map((combo) => (
                             <button
                                 key={combo.name}
                                 onClick={() => handleQuickAdd('lunch', combo)}
-                                className="whitespace-nowrap px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium border border-orange-100 hover:bg-orange-100"
+                                className="whitespace-nowrap px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium border border-orange-100 dark:border-orange-900/50 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors duration-300"
                             >
                                 + {combo.name}
                             </button>
@@ -164,13 +164,13 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
 
                 {/* Dinner Tab */}
                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Dinner</label>
+                    <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-2 block transition-colors duration-300">Dinner</label>
                     <div className="flex overflow-x-auto space-x-2 pb-2 mb-2 no-scrollbar">
                         {quickCombos.map((combo) => (
                             <button
                                 key={combo.name}
                                 onClick={() => handleQuickAdd('dinner', combo)}
-                                className="whitespace-nowrap px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium border border-orange-100 hover:bg-orange-100"
+                                className="whitespace-nowrap px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium border border-orange-100 dark:border-orange-900/50 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors duration-300"
                             >
                                 + {combo.name}
                             </button>
@@ -185,35 +185,35 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
             </div>
 
             {/* Green Tea Section */}
-            <div className="bg-green-50 p-6 rounded-3xl border border-green-100 flex items-center justify-between">
+            <div className="bg-green-50 dark:bg-green-900/10 p-6 rounded-3xl border border-green-100 dark:border-green-900/30 flex items-center justify-between transition-colors duration-300">
                 <div className="flex items-center">
-                    <div className="p-3 bg-white rounded-full text-green-600 shadow-sm mr-4">
+                    <div className="p-3 bg-white dark:bg-slate-800 rounded-full text-green-600 dark:text-green-400 shadow-sm mr-4 transition-colors duration-300">
                         <Coffee className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-green-900">Green Tea</h3>
-                        <p className="text-sm text-green-700">Goal: 2 cups</p>
+                        <h3 className="font-bold text-green-900 dark:text-green-100 transition-colors duration-300">Green Tea</h3>
+                        <p className="text-sm text-green-700 dark:text-green-300 transition-colors duration-300">Goal: 2 cups</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-3 bg-white px-3 py-1 rounded-xl shadow-sm">
+                <div className="flex items-center space-x-3 bg-white dark:bg-slate-800 px-3 py-1 rounded-xl shadow-sm transition-colors duration-300">
                     <button
                         onClick={() => setGreenTeaCups(Math.max(0, greenTeaCups - 1))}
-                        className="text-lg font-bold text-gray-400 hover:text-green-600 w-8"
+                        className="text-lg font-bold text-gray-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 w-8 transition-colors duration-300"
                     >-</button>
-                    <span className="font-bold text-xl text-gray-800 w-4 text-center">{greenTeaCups}</span>
+                    <span className="font-bold text-xl text-gray-800 dark:text-white w-4 text-center transition-colors duration-300">{greenTeaCups}</span>
                     <button
                         onClick={() => setGreenTeaCups(greenTeaCups + 1)}
-                        className="text-lg font-bold text-gray-400 hover:text-green-600 w-8"
+                        className="text-lg font-bold text-gray-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 w-8 transition-colors duration-300"
                     >+</button>
                 </div>
             </div>
 
             <button
                 onClick={handleSave}
-                disabled={isSaved}
+                disabled={isSaved || (!lunch.protein && !dinner.protein && greenTeaCups === 0 && !ifCompliant)}
                 className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center transition-all ${isSaved
-                    ? 'bg-green-500 text-white'
-                    : 'bg-black text-white hover:bg-gray-800'
+                    ? 'bg-green-500 text-white cursor-default'
+                    : 'bg-black dark:bg-slate-800 text-white hover:bg-gray-800 dark:hover:bg-slate-700 shadow-lg hover:shadow-xl dark:shadow-none border border-transparent dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none'
                     }`}
             >
                 {isSaved ? (

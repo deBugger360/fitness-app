@@ -50,17 +50,17 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
     };
 
     return (
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
             <div className="flex space-x-4 mb-6">
                 <button
                     onClick={() => setMode('craving')}
-                    className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'craving' ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' : 'bg-gray-50 text-gray-500'}`}
+                    className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors duration-300 ${mode === 'craving' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500 dark:ring-blue-800' : 'bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400'}`}
                 >
                     Start Craving
                 </button>
                 <button
                     onClick={() => setMode('slip')}
-                    className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${mode === 'slip' ? 'bg-red-100 text-red-700 ring-2 ring-red-500' : 'bg-gray-50 text-gray-500'}`}
+                    className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors duration-300 ${mode === 'slip' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 ring-2 ring-red-500 dark:ring-red-800' : 'bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400'}`}
                 >
                     I Slipped Up
                 </button>
@@ -68,13 +68,13 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
 
             <div className="space-y-4">
                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">What triggered it?</label>
+                    <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase transition-colors duration-300">What triggered it?</label>
                     <div className="flex flex-wrap gap-2 mt-2">
                         {triggers.map(t => (
                             <button
                                 key={t}
                                 onClick={() => setTrigger(t)}
-                                className={`px-3 py-1 rounded-full text-xs font-medium border ${trigger === t ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200'}`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors duration-300 ${trigger === t ? 'bg-gray-800 dark:bg-slate-700 text-white border-gray-800 dark:border-slate-600' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-400 border-gray-200 dark:border-slate-800'}`}
                             >
                                 {t.replace('_', ' ')}
                             </button>
@@ -83,14 +83,14 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase">Intensity (1-10)</label>
+                    <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase transition-colors duration-300">Intensity (1-10)</label>
                     <input
                         type="range" min="1" max="10" step="1"
                         value={intensity}
                         onChange={(e) => setIntensity(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2"
+                        className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer mt-2 transition-colors duration-300"
                     />
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-1 transition-colors duration-300">
                         <span>Mild</span>
                         <span>Unbearable</span>
                     </div>
@@ -98,20 +98,20 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
 
                 {mode === 'craving' && (
                     <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase">Replacement Action?</label>
+                        <label className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase transition-colors duration-300">Replacement Action?</label>
                         <select
                             value={replacement}
                             onChange={(e) => setReplacement(e.target.value)}
-                            className="w-full mt-1 p-2 bg-gray-50 rounded-lg border border-gray-200 text-sm"
+                            className="w-full mt-1 p-2 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 text-sm text-slate-800 dark:text-white transition-colors duration-300 outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-800"
                         >
-                            <option value="">What will you do instead?</option>
-                            {replacements.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
+                            <option value="" className="text-gray-400 dark:text-slate-500">What will you do instead?</option>
+                            {replacements.map(r => <option key={r} value={r} className="dark:bg-slate-800">{r.replace('_', ' ')}</option>)}
                         </select>
                     </div>
                 )}
 
                 {mode === 'slip' && (
-                    <div className="p-3 bg-red-50 text-red-700 text-xs rounded-xl flex items-center">
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs rounded-xl flex items-center transition-colors duration-300">
                         <AlertTriangle className="w-4 h-4 mr-2" />
                         Don't beat yourself up. Log it and move on.
                     </div>
@@ -119,7 +119,8 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
 
                 <button
                     onClick={() => handleLog(mode === 'craving')}
-                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg mt-2 ${mode === 'craving' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-500 hover:bg-red-600'}`}
+                    disabled={mode === 'craving' && !replacement}
+                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg hover:shadow-xl active:shadow-none mt-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none ${mode === 'craving' ? 'bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-500' : 'bg-red-500 hover:bg-red-600 dark:hover:bg-red-400'}`}
                 >
                     {mode === 'craving' ? 'Log Craving & Action' : 'Log Intake'}
                 </button>

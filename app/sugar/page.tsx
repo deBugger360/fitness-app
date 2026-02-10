@@ -57,16 +57,16 @@ export default function SugarPage() {
     }, [currentUserId]);
 
     return (
-        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
+        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
             <header className="mb-10 flex justify-between items-end">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Sugar Guard</h1>
-                    <p className="text-slate-500 mt-2 flex items-center text-lg font-medium">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mr-3 ${phase === 'Reduction' ? 'bg-blue-100/80 text-blue-700' : 'bg-red-100/80 text-red-700'}`}>
+                    <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">Sugar Guard</h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 flex items-center text-lg font-medium transition-colors duration-300">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mr-3 transition-colors duration-300 ${phase === 'Reduction' ? 'bg-blue-100/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-red-100/80 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
                             {phase}
                         </span>
-                        <span className="text-slate-900 font-bold">{streak}</span>
-                        <span className="text-slate-400 ml-1">day streak</span>
+                        <span className="text-slate-900 dark:text-white font-bold transition-colors duration-300">{streak}</span>
+                        <span className="text-slate-400 dark:text-slate-500 ml-1 transition-colors duration-300">day streak</span>
                     </p>
                 </div>
             </header>
@@ -82,29 +82,29 @@ export default function SugarPage() {
             {/* Recent History */}
             <section>
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-bold text-slate-400 text-xs uppercase tracking-wider">Recent Activity</h3>
-                    <span className="text-xs text-slate-400 font-medium cursor-pointer hover:text-slate-600">View All</span>
+                    <h3 className="font-bold text-slate-400 dark:text-slate-500 text-xs uppercase tracking-wider transition-colors duration-300">Recent Activity</h3>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors duration-300">View All</span>
                 </div>
 
                 <div className="space-y-4">
                     {logs.length === 0 && (
-                        <div className="text-center py-10 bg-white/50 rounded-3xl border border-dashed border-slate-200">
-                            <p className="text-slate-400 text-sm italic">No logs yet. Stay strong!</p>
+                        <div className="text-center py-10 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                            <p className="text-slate-400 dark:text-slate-600 text-sm italic transition-colors duration-300">No logs yet. Stay strong!</p>
                         </div>
                     )}
                     {logs.map(log => (
-                        <div key={log.id} className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-white shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
+                        <div key={log.id} className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-4 rounded-2xl border border-white dark:border-slate-800 shadow-sm hover:shadow-md dark:shadow-none transition-all flex justify-between items-center group">
                             <div className="flex items-center">
-                                <div className={`p-3 rounded-xl mr-4 transition-transform group-hover:scale-110 ${log.type === 'intake' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>
+                                <div className={`p-3 rounded-xl mr-4 transition-transform group-hover:scale-110 ${log.type === 'intake' ? 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400' : 'bg-green-50 dark:bg-green-900/20 text-green-500 dark:text-green-400'}`}>
                                     {log.type === 'intake' ? <ShieldAlert className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-slate-800 capitalize tracking-tight">{log.trigger} {log.type === 'intake' ? 'Slip' : 'Resisted'}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {log.type === 'intake' ? 'Consumed sugar' : `Used: ${log.replacement_action.replace('_', ' ')}`}</p>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-white capitalize tracking-tight transition-colors duration-300">{log.trigger} {log.type === 'intake' ? 'Slip' : 'Resisted'}</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 transition-colors duration-300">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {log.type === 'intake' ? 'Consumed sugar' : `Used: ${log.replacement_action.replace('_', ' ')}`}</p>
                                 </div>
                             </div>
                             {log.is_late_night && (
-                                <span className="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-1 rounded-lg border border-indigo-100 uppercase tracking-wide">Late Night</span>
+                                <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 font-bold px-2 py-1 rounded-lg border border-indigo-100 dark:border-indigo-900/50 uppercase tracking-wide transition-colors duration-300">Late Night</span>
                             )}
                         </div>
                     ))}

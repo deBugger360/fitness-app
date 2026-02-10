@@ -56,22 +56,22 @@ const FastingTimer: React.FC = () => {
     }, []);
 
     const getStatusColor = () => {
-        if (status === "eating") return "text-orange-600"; // Active eating
-        if (status === "waiting") return "text-blue-600";
-        return "text-gray-500";
+        if (status === "eating") return "text-orange-600 dark:text-orange-400"; // Active eating
+        if (status === "waiting") return "text-blue-600 dark:text-blue-400";
+        return "text-gray-500 dark:text-slate-500";
     };
 
     return (
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between mb-4">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between mb-4 transition-colors duration-300">
             <div className="flex items-center">
-                <div className={`p-2 rounded-full mr-3 bg-gray-50 shadow-inner ${getStatusColor()}`}>
-                    <Clock className="w-5 h-5" />
+                <div className={`p-2 rounded-full mr-3 bg-gray-50 dark:bg-slate-800 shadow-inner group transition-colors duration-300`}>
+                    <Clock className={`w-5 h-5 ${getStatusColor()}`} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-400 uppercase tracking-wide transition-colors duration-300">
                         {status === "eating" ? "Eating Window" : "Fasting Status"}
                     </h3>
-                    <p className="text-lg font-bold text-gray-900">{timeLeft}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">{timeLeft}</p>
                 </div>
             </div>
 
@@ -79,10 +79,10 @@ const FastingTimer: React.FC = () => {
                 <div className="relative w-12 h-12 flex items-center justify-center">
                     {/* Simple SVG Circular Progress */}
                     <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="24" cy="24" r="20" stroke="#f3f4f6" strokeWidth="4" fill="none" />
+                        <circle cx="24" cy="24" r="20" className="stroke-gray-100 dark:stroke-slate-800 transition-colors duration-300" strokeWidth="4" fill="none" />
                         <circle
                             cx="24" cy="24" r="20"
-                            stroke="#ea580c"
+                            className="stroke-orange-600 dark:stroke-orange-500 transition-colors duration-300"
                             strokeWidth="4"
                             fill="none"
                             strokeDasharray="125.6"

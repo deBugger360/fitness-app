@@ -138,49 +138,56 @@ export default function DietAnalysisModal({ currentUserId, isOpen, onClose }: Di
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-[32px] w-full max-w-md p-8 shadow-2xl animate-scale-in">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] w-full max-w-md p-8 shadow-2xl dark:shadow-none animate-scale-in transition-colors duration-300">
 
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold text-slate-900 flex items-center">
-                        <Sparkles className="w-6 h-6 mr-2 text-indigo-500 fill-indigo-100" />
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center transition-colors duration-300">
+                        <Sparkles className="w-6 h-6 mr-2 text-indigo-500 fill-indigo-100 dark:fill-indigo-900/50" />
                         Diet Analysis
                     </h3>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-                        <X className="w-6 h-6 text-slate-400" />
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <X className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                     </button>
                 </div>
 
+                {!analysis && !description && !saving && ( // Only show if not analyzing
+                    // logic handled by !analysis block below
+                    null
+                )}
+
+                {/* Input View */}
                 {!analysis ? (
                     <div className="space-y-6">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">What did you eat?</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors duration-300">What did you eat?</label>
                             <textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none font-medium text-slate-900 placeholder:text-slate-400 resize-none h-32"
+                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/20 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none h-32 transition-all duration-300"
                                 placeholder="E.g., I had a burger and fries for lunch..."
                                 autoFocus
                             />
-                            <p className="text-xs text-slate-400 mt-2 font-medium">Be honest! We'll help you adjust.</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium transition-colors duration-300">Be honest! We'll help you adjust.</p>
                         </div>
 
                         <button
                             onClick={handleAnalyze}
                             disabled={!description.trim() || saving}
-                            className="w-full bg-indigo-600 active:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:shadow-indigo-300 transition-all flex items-center justify-center"
+                            className="w-full bg-indigo-600 active:bg-indigo-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl dark:shadow-none transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                         >
                             {saving ? 'Analyzing...' : 'Analyze My Meal'}
                             {!saving && <ArrowRight className="w-5 h-5 ml-2" />}
                         </button>
                     </div>
                 ) : (
+                    // Result View
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
                         {/* Result Card */}
-                        <div className={`p-6 rounded-2xl border-2 ${analysis.quality === 'healthy' ? 'bg-green-50 border-green-100 text-green-800' :
-                            analysis.quality === 'moderate' ? 'bg-yellow-50 border-yellow-100 text-yellow-800' :
-                                'bg-red-50 border-red-100 text-red-800'
+                        <div className={`p-6 rounded-2xl border-2 transition-colors duration-300 ${analysis.quality === 'healthy' ? 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/50 text-green-800 dark:text-green-300' :
+                            analysis.quality === 'moderate' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/50 text-yellow-800 dark:text-yellow-300' :
+                                'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/50 text-red-800 dark:text-red-300'
                             }`}>
                             <div className="flex items-center mb-3">
                                 {analysis.quality === 'healthy' && <CheckCircle className="w-6 h-6 mr-2" />}
@@ -193,12 +200,12 @@ export default function DietAnalysisModal({ currentUserId, isOpen, onClose }: Di
 
                         {/* Correction Plan */}
                         {(analysis.quality === 'unhealthy' || analysis.quality === 'moderate') && (
-                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                                <h5 className="font-bold text-slate-900 mb-2 text-sm uppercase tracking-wider flex items-center">
-                                    <Sparkles className="w-4 h-4 mr-2 text-indigo-500" />
+                            <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 transition-colors duration-300">
+                                <h5 className="font-bold text-slate-900 dark:text-white mb-2 text-sm uppercase tracking-wider flex items-center transition-colors duration-300">
+                                    <Sparkles className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400" />
                                     Smart Correction
                                 </h5>
-                                <p className="text-slate-600 font-medium leading-relaxed">
+                                <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed transition-colors duration-300">
                                     {analysis.correction}
                                 </p>
                             </div>
@@ -206,7 +213,7 @@ export default function DietAnalysisModal({ currentUserId, isOpen, onClose }: Di
 
                         <button
                             onClick={reset}
-                            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 transition-all flex items-center justify-center p-4 hover:shadow-lg hover:shadow-slate-200"
+                            className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl font-bold text-lg hover:bg-slate-800 dark:hover:bg-slate-700 transition-all flex items-center justify-center p-4 hover:shadow-lg hover:shadow-slate-200 dark:hover:shadow-none border border-transparent dark:border-slate-700"
                         >
                             Got it, thanks!
                         </button>

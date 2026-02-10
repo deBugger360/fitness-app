@@ -131,9 +131,9 @@ export default function OnboardingWizard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-6 pb-12">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between p-6 pb-12 transition-colors duration-300">
             {/* Progress Bar */}
-            <div className="w-full h-1 bg-slate-200 rounded-full mb-8">
+            <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-full mb-8 transition-colors duration-300">
                 <div
                     className="h-full bg-indigo-600 rounded-full transition-all duration-300"
                     style={{ width: `${(step / steps.length) * 100}%` }}
@@ -142,10 +142,10 @@ export default function OnboardingWizard() {
 
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2 transition-colors duration-300">
                     {steps[step - 1].title}
                 </h1>
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 dark:text-slate-400 font-medium transition-colors duration-300">
                     {steps[step - 1].subtitle}
                 </p>
             </div>
@@ -154,12 +154,12 @@ export default function OnboardingWizard() {
             <div className="flex-1 overflow-y-auto">
                 {step === 1 && (
                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                        <label className="block text-sm font-bold text-slate-700">What should we call you?</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors duration-300">What should we call you?</label>
                         <input
                             type="text"
                             value={formData.name}
                             onChange={(e) => handleChange('name', e.target.value)}
-                            className="w-full px-5 py-4 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold text-lg text-slate-900 placeholder:text-slate-400"
+                            className="w-full px-5 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/20 outline-none font-bold text-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors duration-300"
                             placeholder="Your Name"
                             autoFocus
                         />
@@ -169,15 +169,15 @@ export default function OnboardingWizard() {
                 {step === 2 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Gender</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors duration-300">Gender</label>
                             <div className="grid grid-cols-2 gap-4">
                                 {['Male', 'Female'].map(g => (
                                     <button
                                         key={g}
                                         onClick={() => handleChange('gender', g)}
-                                        className={`p-4 rounded-2xl border-2 font-bold transition-all ${formData.gender === g
-                                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                        className={`p-4 rounded-2xl border-2 font-bold transition-all duration-300 ${formData.gender === g
+                                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 dark:border-indigo-500'
+                                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                             }`}
                                     >
                                         {g}
@@ -186,12 +186,12 @@ export default function OnboardingWizard() {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Age</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors duration-300">Age</label>
                             <input
                                 type="number"
                                 value={formData.age}
                                 onChange={(e) => handleChange('age', e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 placeholder:text-slate-400"
+                                className="w-full px-5 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors duration-300"
                                 placeholder="25"
                             />
                         </div>
@@ -201,29 +201,29 @@ export default function OnboardingWizard() {
                 {step === 3 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Height (cm)</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors duration-300">Height (cm)</label>
                             <div className="relative">
                                 <input
                                     type="number"
                                     value={formData.height_cm}
                                     onChange={(e) => handleChange('height_cm', e.target.value)}
-                                    className="w-full px-5 py-4 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 placeholder:text-slate-400"
+                                    className="w-full px-5 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors duration-300"
                                     placeholder="175"
                                 />
-                                <Ruler className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                <Ruler className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5 transition-colors duration-300" />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Current Weight (kg)</label>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 transition-colors duration-300">Current Weight (kg)</label>
                             <div className="relative">
                                 <input
                                     type="number"
                                     value={formData.weight_kg}
                                     onChange={(e) => handleChange('weight_kg', e.target.value)}
-                                    className="w-full px-5 py-4 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 placeholder:text-slate-400"
+                                    className="w-full px-5 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none font-bold text-lg text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors duration-300"
                                     placeholder="75.0"
                                 />
-                                <Weight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                <Weight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5 transition-colors duration-300" />
                             </div>
                         </div>
                     </div>
@@ -235,13 +235,13 @@ export default function OnboardingWizard() {
                             <button
                                 key={level.value}
                                 onClick={() => handleChange('activity_level', level.value)}
-                                className={`w-full p-4 rounded-2xl border text-left transition-all ${formData.activity_level === level.value
-                                    ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
-                                    : 'border-slate-200 bg-white hover:border-slate-300'
+                                className={`w-full p-4 rounded-2xl border text-left transition-all duration-300 ${formData.activity_level === level.value
+                                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 ring-1 ring-indigo-600 dark:ring-indigo-500 dark:border-indigo-500'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
                                     }`}
                             >
-                                <div className="font-bold text-slate-900">{level.label}</div>
-                                <div className="text-xs text-slate-500 mt-1">{level.desc}</div>
+                                <div className="font-bold text-slate-900 dark:text-white transition-colors duration-300">{level.label}</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-300">{level.desc}</div>
                             </button>
                         ))}
                     </div>
@@ -253,9 +253,9 @@ export default function OnboardingWizard() {
                             <button
                                 key={goal.value}
                                 onClick={() => toggleGoal(goal.value)}
-                                className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center transition-all aspect-square ${formData.goals.includes(goal.value)
-                                    ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600'
-                                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center transition-all duration-300 aspect-square ${formData.goals.includes(goal.value)
+                                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-600 dark:ring-indigo-500 dark:border-indigo-500'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
                                     }`}
                             >
                                 <goal.icon className="w-8 h-8 mb-2" />
@@ -272,23 +272,23 @@ export default function OnboardingWizard() {
 
                 {step === 6 && (
                     <div className="flex flex-col items-center animate-in fade-in slide-in-from-right-4 duration-300">
-                        <div className="w-32 h-32 rounded-full bg-slate-200 mb-6 overflow-hidden relative border-4 border-white shadow-lg">
+                        <div className="w-32 h-32 rounded-full bg-slate-200 dark:bg-slate-800 mb-6 overflow-hidden relative border-4 border-white dark:border-slate-700 shadow-lg dark:shadow-none transition-colors duration-300">
                             {formData.photo ? (
                                 <img src={formData.photo} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 transition-colors duration-300">
                                     <User className="w-12 h-12" />
                                 </div>
                             )}
                         </div>
 
-                        <label className="cursor-pointer bg-white border border-slate-200 text-slate-700 px-6 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors flex items-center shadow-sm">
+                        <label className="cursor-pointer bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center shadow-sm dark:shadow-none">
                             <Camera className="w-5 h-5 mr-2" />
                             Upload Photo
                             <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                         </label>
 
-                        <p className="text-slate-400 text-sm mt-4 text-center px-8">
+                        <p className="text-slate-400 dark:text-slate-500 text-sm mt-4 text-center px-8 transition-colors duration-300">
                             This creates your personal avatar in the app. You can skip this if you prefer.
                         </p>
                     </div>
@@ -300,7 +300,7 @@ export default function OnboardingWizard() {
                 {step > 1 && (
                     <button
                         onClick={handleBack}
-                        className="px-6 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors"
+                        className="px-6 py-4 rounded-xl font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-300"
                     >
                         Back
                     </button>
@@ -308,9 +308,9 @@ export default function OnboardingWizard() {
                 <button
                     onClick={handleNext}
                     disabled={!isStepValid() || loading}
-                    className={`flex-1 py-4 rounded-xl font-bold text-white shadow-lg shadow-indigo-200 flex items-center justify-center transition-all ${isStepValid() && !loading
+                    className={`flex-1 py-4 rounded-xl font-bold text-white shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center transition-all duration-300 ${isStepValid() && !loading
                         ? 'bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98]'
-                        : 'bg-indigo-300 cursor-not-allowed'
+                        : 'bg-indigo-300 dark:bg-indigo-900/50 cursor-not-allowed'
                         }`}
                 >
                     {loading ? 'Setting up...' : step === steps.length ? 'Finish Setup' : 'Continue'}

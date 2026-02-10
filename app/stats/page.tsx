@@ -51,7 +51,7 @@ export default function StatsPage() {
 
     if (loading) {
         return (
-            <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
+            <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
                 <Skeleton className="h-10 w-32 mb-2" />
                 <Skeleton className="h-6 w-48 mb-8" />
 
@@ -65,12 +65,12 @@ export default function StatsPage() {
     }
 
     return (
-        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 animate-fade-in-up">
+        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 animate-fade-in-up transition-colors duration-300">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white transition-colors duration-300">
                     Insights
                 </h1>
-                <p className="text-slate-500 mt-1">Signals matching your goals</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-300">Signals matching your goals</p>
             </header>
 
             <AnalyticsEngine

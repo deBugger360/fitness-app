@@ -5,6 +5,7 @@ import planData from '@/fitness_plan.json';
 export interface ExercisePlan {
     name: string;
     targetReps: number;
+    unit?: string;
     safetyTip?: string;
 }
 
@@ -103,18 +104,23 @@ export function usePersonalizedPlan(currentUserId: number | null) {
             // 3. Map Exercises with Logic
             const processedExercises: ExercisePlan[] = rawExercises.map(exName => {
                 let target = 15;
+                let unit = 'reps';
                 let tip = "";
 
-                if (exName.includes("pushup")) {
+                const nameLower = exName.toLowerCase();
+
+                if (nameLower.includes("pushup")) {
                     target = Math.ceil(10 * repMultiplier);
                     tip = "Keep core tight to protect lower back. Knees down if needed.";
-                } else if (exName.includes("squat")) {
+                } else if (nameLower.includes("squat")) {
                     target = Math.ceil(20 * repMultiplier);
                     tip = "Weight in heels. Don't round your spine.";
-                } else if (exName.includes("hollow") || exName.includes("plank")) {
+                } else if (nameLower.includes("hollow") || nameLower.includes("plank") || nameLower.includes("wall sit")) {
                     target = Math.ceil(30 * repMultiplier); // seconds
-                    tip = "Press lower back into floor/mat.";
-                } else if (exName.includes("jumping") || exName.includes("jack")) {
+                    unit = 's';
+                    tip = "Hold steady. Breathe evenly.";
+                    if (nameLower.includes("hollow")) tip = "Press lower back into floor/mat.";
+                } else if (nameLower.includes("jumping") || nameLower.includes("jack")) {
                     target = Math.ceil(30 * repMultiplier);
                     tip = "Soft knees on landing. Step-out for low impact.";
                 } else {
@@ -125,6 +131,7 @@ export function usePersonalizedPlan(currentUserId: number | null) {
                 return {
                     name: exName,
                     targetReps: target,
+                    unit,
                     safetyTip: tip
                 };
             });
