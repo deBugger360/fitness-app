@@ -1,9 +1,9 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
 import AnalyticsEngine from '@/components/AnalyticsEngine';
+import Skeleton from "@/components/Skeleton";
 
 export default function StatsPage() {
     const [data, setData] = useState<{ workouts: any[], sugar: any[], meals: any[] }>({ workouts: [], sugar: [], meals: [] });
@@ -50,16 +50,27 @@ export default function StatsPage() {
     }, []);
 
     if (loading) {
-        return <div className="flex h-screen items-center justify-center text-gray-400">Crunching numbers...</div>;
+        return (
+            <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
+                <Skeleton className="h-10 w-32 mb-2" />
+                <Skeleton className="h-6 w-48 mb-8" />
+
+                <div className="space-y-6">
+                    <Skeleton className="h-64 w-full rounded-[24px]" />
+                    <Skeleton className="h-48 w-full rounded-[24px]" />
+                    <Skeleton className="h-48 w-full rounded-[24px]" />
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="pb-24 px-6 pt-10 min-h-screen bg-gray-50">
+        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 animate-fade-in-up">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-3xl font-bold text-slate-900">
                     Insights
                 </h1>
-                <p className="text-gray-500 mt-1">Signals matching your goals</p>
+                <p className="text-slate-500 mt-1">Signals matching your goals</p>
             </header>
 
             <AnalyticsEngine

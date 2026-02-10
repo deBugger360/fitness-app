@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '@/lib/db';
 import planData from '@/fitness_plan.json';
-import { Save, Coffee, Utensils, Zap, Clock } from 'lucide-react';
+import { Save, Coffee, Utensils, Zap, Clock, ChevronDown } from 'lucide-react';
 
 interface MealLoggerProps {
     currentUserId: number | null;
@@ -94,18 +94,23 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
     };
 
     const MealSelect = ({ label, value, onChange, options }: any) => (
-        <div className="mb-2 w-full">
-            <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</label>
-            <select
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full mt-1 p-2 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-green-500"
-            >
-                <option value="">Select...</option>
-                {options.map((opt: string) => (
-                    <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>
-                ))}
-            </select>
+        <div className="mb-3 w-full relative group">
+            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1.5 block ml-1">{label}</label>
+            <div className="relative">
+                <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full appearance-none p-3 pr-10 bg-slate-50 rounded-2xl border-2 border-slate-100 text-slate-900 font-bold text-sm outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer group-hover:border-slate-200"
+                >
+                    <option value="" className="text-slate-400">Select...</option>
+                    {options.map((opt: string) => (
+                        <option key={opt} value={opt}>{opt.replace(/_/g, ' ')}</option>
+                    ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <ChevronDown className="w-5 h-5" />
+                </div>
+            </div>
         </div>
     );
 

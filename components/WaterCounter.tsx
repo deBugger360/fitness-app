@@ -83,21 +83,21 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
                 <div className="grid grid-cols-3 gap-3">
                     <button
                         onClick={() => updateWater(0.25)}
-                        className="py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                        className="py-3 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-all active:scale-95 active:bg-blue-200 shadow-sm border border-blue-100"
                         disabled={!currentUserId}
                     >
                         +0.25L
                     </button>
                     <button
                         onClick={() => updateWater(0.5)}
-                        className="py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                        className="py-3 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-all active:scale-95 active:bg-blue-200 shadow-sm border border-blue-100"
                         disabled={!currentUserId}
                     >
                         +0.5L
                     </button>
                     <button
                         onClick={() => updateWater(1.0)}
-                        className="py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors"
+                        className="py-3 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-all active:scale-95 active:bg-blue-200 shadow-sm border border-blue-100"
                         disabled={!currentUserId}
                     >
                         +1.0L

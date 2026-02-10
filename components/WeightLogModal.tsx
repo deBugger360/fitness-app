@@ -62,46 +62,52 @@ const WeightLogModal: React.FC<WeightLogModalProps> = ({ currentUserId, isOpen, 
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Weight (kg)</label>
-                        <div className="relative">
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Weight</label>
+                        <div className="relative group">
                             <input
                                 type="number"
                                 step="0.1"
                                 value={weight}
                                 onChange={(e) => setWeight(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-lg text-slate-900 placeholder:text-slate-300"
+                                className="w-full pl-5 pr-16 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 group-hover:border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xl text-slate-900 placeholder:text-slate-300"
                                 placeholder="0.0"
                                 required
                             />
-                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">KG</span>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                                <span className="h-6 w-px bg-slate-300 mx-3"></span>
+                                <span className="text-slate-500 font-bold text-sm">KG</span>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Waist (cm)</label>
-                        <div className="relative">
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Waist Circumference</label>
+                        <div className="relative group">
                             <input
                                 type="number"
                                 step="0.1"
                                 value={waist}
                                 onChange={(e) => setWaist(e.target.value)}
-                                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-lg text-slate-900 placeholder:text-slate-300"
+                                className="w-full pl-5 pr-16 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 group-hover:border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-xl text-slate-900 placeholder:text-slate-300"
                                 placeholder="0.0"
                             />
-                            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">CM</span>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                                <span className="h-6 w-px bg-slate-300 mx-3"></span>
+                                <span className="text-slate-500 font-bold text-sm">CM</span>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Notes</label>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Notes</label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-900 placeholder:text-slate-300 resize-none"
-                            placeholder="How do you feel?"
-                            rows={2}
+                            className="w-full px-5 py-4 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-lg text-slate-900 placeholder:text-slate-400 resize-none"
+                            placeholder="How do you feel today?"
+                            rows={3}
                         />
                     </div>
 

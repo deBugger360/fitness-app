@@ -4,10 +4,12 @@ import React, { useEffect, useState } from "react";
 import { db } from "@/lib/db";
 import planData from "@/fitness_plan.json";
 import { User, RefreshCw, Smartphone, Target } from "lucide-react";
+import Skeleton from "@/components/Skeleton";
 
 export default function ProfilePage() {
     const [user, setUser] = useState<any>(null);
     const [pendingSyncs, setPendingSyncs] = useState(0);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -19,27 +21,29 @@ export default function ProfilePage() {
 
             // Check Sync Status (Syncd = 0)
             const unsyncedWorkouts = await db.table('workouts').where('synced').equals(0).count();
-            // Assume meals might eventually have sync too (currently not in prompt to sync meals, but good to check)
-            // schema for meals doesn't explicitly have synced index in version 3 store def in db.js, 
-            // but let's stick to workouts as per prompt 16 "waiting to be uploaded". 
-            // Actually prompt 16 says "how many local records (workouts/meals)". 
-
-            // Let's check if meals have synced. In db.js v3, meals has '++id, date, user_id'. 
-            // It DOES NOT have 'synced'. 
-            // I should probably add 'synced' to meals to be consistent, but for now I will just count workouts
-            // as that's what we explicitly set up in syncManager.
-            // Wait, prompt 17 implies syncing everything.
-            // Let's just count workouts for now as that is the guaranteed one.
-
             setPendingSyncs(unsyncedWorkouts);
-        };
+            setLoading(false);
+        }
 
         fetchProfile();
     }, []);
 
+    if (loading) {
+        return (
+            <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 flex flex-col items-center">
+                <Skeleton className="w-28 h-28 rounded-full mb-4" />
+                <Skeleton className="h-8 w-48 mb-2" />
+                <Skeleton className="h-4 w-32 mb-6" />
+                <div className="w-full space-y-4">
+                    <Skeleton className="h-32 w-full rounded-[24px]" />
+                    <Skeleton className="h-24 w-full rounded-[24px]" />
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50">
+        <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 animate-fade-in-up">
             <header className="mb-8 flex flex-col items-center justify-center text-center relative">
                 <div className="w-28 h-28 rounded-full bg-slate-200 mb-4 shadow-xl shadow-indigo-100 border-4 border-white overflow-hidden relative">
                     {user?.photo ? (

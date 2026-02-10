@@ -98,7 +98,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                 <p className="text-sm text-slate-500 mb-6 ml-9 relative z-10 font-medium">15 mins • Bodyweight Only</p>
 
                 <div className="space-y-3 relative z-10">
-                    {exercises.map((exercise: any) => {
+                    {exercises.map((exercise: any, index: number) => {
                         const name = typeof exercise === 'string' ? exercise : exercise.name;
                         const tip = typeof exercise === 'string' ? null : exercise.safetyTip;
                         const target = typeof exercise === 'string' ? null : exercise.targetReps;
@@ -107,17 +107,18 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                             <div
                                 key={name}
                                 onClick={() => toggleExercise(name)}
-                                className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between group active:scale-[0.98] ${completedExercises.has(name)
+                                className={`p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex items-center justify-between group active:scale-[0.98] animate-fade-in-up ${completedExercises.has(name)
                                     ? 'bg-blue-50/50 border-blue-100'
                                     : 'bg-white border-slate-100 shadow-sm hover:border-slate-200 hover:shadow-md'
                                     }`}
+                                style={{ animationDelay: `${index * 50}ms` }}
                             >
                                 <div className="flex items-start">
                                     <div className={`w-7 h-7 rounded-full border-[2.5px] mr-4 mt-0.5 flex items-center justify-center transition-all duration-300 ${completedExercises.has(name)
                                         ? 'bg-blue-500 border-blue-500 scale-110'
                                         : 'border-slate-300 group-hover:border-blue-400'
                                         }`}>
-                                        {completedExercises.has(name) && <Check className="w-4 h-4 text-white font-bold" strokeWidth={4} />}
+                                        {completedExercises.has(name) && <Check className="w-4 h-4 text-white font-bold animate-scale-in" strokeWidth={4} />}
                                     </div>
                                     <div>
                                         <span className={`capitalize text-base font-semibold block transition-colors ${completedExercises.has(name) ? 'text-slate-400 line-through decoration-2 decoration-slate-300' : 'text-slate-800'
@@ -145,7 +146,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
             </div>
 
             {/* Evening Cardio Section */}
-            {/* Evening Cardio Section */}
+            {/* Same logic... */}
             <div className="bg-white p-6 rounded-[32px] shadow-xl shadow-slate-100 border border-slate-50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-purple-50 rounded-full blur-3xl -mr-20 -mt-20 opacity-60"></div>
 
@@ -163,7 +164,7 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                         </span>
                     </div>
 
-                    <div className="relative h-10 flex items-center">
+                    <div className="relative h-10 flex items-center group">
                         <div className="absolute w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-purple-500 transition-all" style={{ width: `${(eveningWalkMinutes / 120) * 100}%` }}></div>
                         </div>
@@ -179,9 +180,9 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                             }}
                             className="w-full h-10 absolute opacity-0 cursor-pointer z-20"
                         />
-                        {/* Custom Thumb - visual only, follows input */}
+                        {/* Custom Thumb */}
                         <div
-                            className="w-8 h-8 bg-white border-4 border-purple-500 rounded-full shadow-lg absolute pointer-events-none transition-all z-10 flex items-center justify-center transform -translate-x-1/2"
+                            className="w-8 h-8 bg-white border-4 border-purple-500 rounded-full shadow-lg absolute pointer-events-none transition-all z-10 flex items-center justify-center transform -translate-x-1/2 group-active:scale-110"
                             style={{ left: `${(eveningWalkMinutes / 120) * 100}%` }}
                         >
                             <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
@@ -201,14 +202,14 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
             <button
                 onClick={finishWorkout}
                 disabled={isSaved}
-                className={`w-full py-4 rounded-xl font-bold shadow-lg transition-transform active:scale-95 flex items-center justify-center ${isSaved
-                    ? 'bg-green-500 text-white cursor-default'
-                    : 'bg-black text-white hover:bg-gray-800'
+                className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center ${isSaved
+                    ? 'bg-green-500 text-white cursor-default shadow-green-200 scale-100 animate-scale-in'
+                    : 'bg-black text-white hover:bg-gray-800 hover:shadow-xl'
                     }`}
             >
                 {isSaved ? (
                     <>
-                        <Check className="w-5 h-5 mr-2" />
+                        <Check className="w-5 h-5 mr-2 animate-scale-in" />
                         Daily Activity Saved
                     </>
                 ) : (
