@@ -125,8 +125,12 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
                         <Clock className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className={`font-bold transition-colors duration-300 ${ifCompliant ? 'text-purple-900 dark:text-purple-100' : 'text-gray-700 dark:text-slate-300'}`}>Fasting Goal</h3>
-                        <p className="text-xs text-gray-500 dark:text-slate-500 transition-colors duration-300">12:00 PM - 6:00 PM Window</p>
+                        <h3 className={`font-bold transition-colors duration-300 ${ifCompliant ? 'text-purple-900 dark:text-purple-100' : 'text-gray-700 dark:text-slate-300'}`}>
+                            {ifCompliant ? 'Fasting Goal Met!' : 'Fasting Check-in'}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-slate-500 transition-colors duration-300">
+                            {ifCompliant ? 'You stuck to the 12-6pm window.' : 'Tap if you stuck to 12-6pm window'}
+                        </p>
                     </div>
                 </div>
                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${ifCompliant ? 'bg-purple-600 border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'border-gray-300 dark:border-slate-600'}`}>

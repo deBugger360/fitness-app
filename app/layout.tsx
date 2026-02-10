@@ -4,6 +4,7 @@ import "./globals.css";
 import MobileLayout from "@/components/MobileLayout";
 import SyncProvider from "@/components/SyncProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import NotificationManager from "@/components/NotificationManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,6 +57,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SyncProvider />
+          <NotificationManager />
           <MobileLayout>
             {children}
           </MobileLayout>
