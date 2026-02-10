@@ -12,6 +12,7 @@ import WeightLogModal from "@/components/WeightLogModal";
 import Skeleton from "@/components/Skeleton";
 import { usePersonalizedPlan } from "@/hooks/usePersonalizedPlan";
 import MilestoneLink from "@/components/MilestoneLink";
+import RecommendationEngine from "@/components/RecommendationEngine";
 
 export default function Dashboard() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -82,6 +83,11 @@ export default function Dashboard() {
           <Plus className="w-6 h-6 transition-transform group-active:rotate-90" />
         </button>
       </header>
+
+      {/* Smart Recommendations */}
+      <div className="animate-fade-in-up" style={{ animationDelay: '10ms' }}>
+        {currentUserId && <RecommendationEngine currentUserId={currentUserId} />}
+      </div>
 
       {/* Milestone Progress (Hook Model: Investment) */}
       <div className="animate-fade-in-up hover:scale-[1.01] transition-transform duration-300" style={{ animationDelay: '50ms' }}>
