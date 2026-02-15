@@ -1,43 +1,50 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import { ShieldAlert, Trophy, TrendingDown } from "lucide-react";
-import CravingTimer from "@/components/sugar/CravingTimer";
-import SugarLogger from "@/components/sugar/SugarLogger";
+import CravingTimer from "@/features/sugar/components/CravingTimer";
+import SugarLogger from "@/features/sugar/components/SugarLogger";
 
 export default function SugarPage() {
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [logs, setLogs] = useState<any[]>([]);
     const [streak, setStreak] = useState(0);
     const [phase, setPhase] = useState("Reduction");
 
     useEffect(() => {
         const initUser = async () => {
-            let userId = 1;
-            const user = await db.table('users').limit(1).first();
-            if (user) userId = user.id;
-            setCurrentUserId(userId);
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setCurrentUserId(user.id);
         };
         initUser();
     }, []);
 
     const fetchLogs = async () => {
         if (!currentUserId) return;
-        const history = await db.table('sugar_logs')
-            .where('user_id').equals(currentUserId)
-            .reverse()
-            .limit(10)
-            .toArray();
-        setLogs(history);
+        const supabase = createClient();
+
+        // Fetch last 10 logs
+        const { data: history } = await supabase
+            .from('sugar_logs')
+            .select('*')
+            .eq('user_id', currentUserId)
+            .order('timestamp', { ascending: false })
+            .limit(10);
+
+        if (history) setLogs(history);
 
         // Calc Streak (Consecutive days without 'intake' type logs)
         // Simplified logic: Count days since last 'intake'
-        const lastSlip = await db.table('sugar_logs')
-            .where('user_id').equals(currentUserId)
-            .and(l => l.type === 'intake')
-            .reverse()
-            .first();
+        const { data: lastSlip } = await supabase
+            .from('sugar_logs')
+            .select('*')
+            .eq('user_id', currentUserId)
+            .eq('type', 'intake')
+            .order('date', { ascending: false })
+            .limit(1)
+            .single();
 
         if (lastSlip) {
             const lastDate = new Date(lastSlip.date);
@@ -47,8 +54,9 @@ export default function SugarPage() {
             setStreak(Math.max(0, diffDays));
         } else {
             // No slips ever? Or just started.
-            // If data exists, calc days since start. If empty, 0.
-            setStreak(0); // improving this requires fetching first log date, keeping simple for now.
+            // If data exists, calc days since start? Or just 0 if no data?
+            // For now, let's leave it simple.
+            setStreak(0);
         }
     };
 

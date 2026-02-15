@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from '@/utils/supabase/client';
 import { X, Sparkles, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface DietAnalysisModalProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -117,7 +117,8 @@ export default function DietAnalysisModal({ currentUserId, isOpen, onClose }: Di
         // Save to DB
         if (currentUserId) {
             try {
-                await db.table('diet_reflections').add({
+                const supabase = createClient();
+                await supabase.from('diet_reflections').insert({
                     user_id: currentUserId,
                     date: new Date().toISOString(),
                     description: description,

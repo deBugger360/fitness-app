@@ -21,13 +21,20 @@ export default function AuthForm() {
 
         try {
             if (mode === 'signup') {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                 });
                 if (error) throw error;
-                // Maybe auto-login or show confirmation
-                alert("Check your email for confirmation!");
+
+                if (data.session) {
+                    // User is signed in (Email confirmation disabled or auto-confirm enabled)
+                    router.push('/');
+                    router.refresh();
+                } else {
+                    // Email confirmation is required
+                    alert("Check your email for confirmation!");
+                }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,

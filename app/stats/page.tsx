@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from '@/utils/supabase/client';
 import AnalyticsEngine from '@/features/analytics/components/AnalyticsEngine';
 import Skeleton from "@/features/core/components/Skeleton";
 
@@ -11,34 +11,46 @@ export default function StatsPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            // 1. Resolve User
-            let userId = 1;
             try {
-                const user = await db.table('users').limit(1).first();
-                if (user) userId = user.id;
+                // 1. Resolve User
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
 
-                // 2. Calculate Date Range (Last 7 Days)
-                const endDate = new Date();
-                const startDate = new Date();
-                startDate.setDate(endDate.getDate() - 6);
-                const startStr = startDate.toISOString().split('T')[0];
-                const endStr = endDate.toISOString().split('T')[0];
+                if (user) {
+                    const userId = user.id;
 
-                // 3. Fetch All Signals (Parallel)
-                const [workouts, sugar, meals] = await Promise.all([
-                    db.table('workouts')
-                        .where('date').between(startStr, endStr, true, true)
-                        .and(w => w.user_id === userId).toArray(),
-                    db.table('sugar_logs')
-                        .where('date').between(startStr, endStr, true, true)
-                        .and(w => w.user_id === userId).toArray(),
-                    db.table('meals')
-                        .where('date').between(startStr, endStr, true, true)
-                        .and(w => w.user_id === userId).toArray()
-                ]);
+                    // 2. Calculate Date Range (Last 7 Days)
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(endDate.getDate() - 6);
+                    const startStr = startDate.toISOString().split('T')[0];
+                    const endStr = endDate.toISOString().split('T')[0];
 
-                setData({ workouts, sugar, meals });
+                    // 3. Fetch All Signals (Parallel)
+                    const [workoutsResult, sugarResult, mealsResult] = await Promise.all([
+                        supabase.from('workouts')
+                            .select('*')
+                            .gte('date', startStr)
+                            .lte('date', endStr)
+                            .eq('user_id', userId),
+                        supabase.from('sugar_logs')
+                            .select('*')
+                            .gte('date', startStr)
+                            .lte('date', endStr)
+                            .eq('user_id', userId),
+                        supabase.from('meals')
+                            .select('*')
+                            .gte('date', startStr)
+                            .lte('date', endStr)
+                            .eq('user_id', userId)
+                    ]);
 
+                    setData({
+                        workouts: workoutsResult.data || [],
+                        sugar: sugarResult.data || [],
+                        meals: mealsResult.data || []
+                    });
+                }
             } catch (err) {
                 console.error("Error loading analytics:", err);
             } finally {

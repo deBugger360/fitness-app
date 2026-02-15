@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import planData from "@/fitness_plan.json";
 import { User, RefreshCw, Target, Bell, Flame, CheckCircle2, Circle } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
-import Skeleton from "@/components/Skeleton";
-import Milestones from "@/components/Milestones";
+import ThemeToggle from "@/features/core/components/ThemeToggle";
+import Skeleton from "@/features/core/components/Skeleton";
+import Milestones from "@/features/gamification/components/Milestones";
 
 export default function ProfilePage() {
     const [user, setUser] = useState<any>(null);
@@ -18,51 +18,64 @@ export default function ProfilePage() {
 
     useEffect(() => {
         const fetchProfile = async () => {
-            // Fetch User
-            const storedUser = await db.table('users').limit(1).first();
-            if (storedUser) {
-                setUser(storedUser);
-                // Load notification pref from local storage or default
-                const notifPref = localStorage.getItem('notifications_enabled') === 'true';
-                setNotificationsEnabled(notifPref);
+            const supabase = createClient();
+
+            // Get Current User Auth
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+
+            if (authUser) {
+                // Fetch Profile
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', authUser.id)
+                    .single();
+
+                if (profile) {
+                    setUser(profile);
+                    // Load notification pref from local storage or default
+                    const notifPref = localStorage.getItem('notifications_enabled') === 'true';
+                    setNotificationsEnabled(notifPref);
+
+                    // Fetch Weekly History (Last 7 Days)
+                    const today = new Date();
+                    const last7Days = [];
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(today.getDate() - i);
+                        last7Days.push(d.toISOString().split('T')[0]);
+                    }
+
+                    // Query Workouts
+                    const startDate = last7Days[0];
+                    const endDate = last7Days[last7Days.length - 1];
+
+                    const { data: historyData } = await supabase
+                        .from('workouts')
+                        .select('*')
+                        .gte('date', startDate)
+                        .lte('date', endDate)
+                        .eq('user_id', authUser.id);
+
+                    const history = historyData || [];
+
+                    // Map history to days
+                    const weekData = last7Days.map(date => {
+                        const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+                        const found = history.find((h: any) => h.date === date);
+                        return { date, day: dayName, completed: !!found };
+                    });
+                    setWeeklyHistory(weekData);
+
+                    // Calculate Streak (Simple version: count workouts in last X days?)
+                    // For now, let's just count total workouts as a proxy or fetch streak specific logic
+                    const currentStreak = history.length;
+                    setCurrentStreak(currentStreak);
+                }
             }
 
-            // Check Sync Status (Syncd = 0)
-            const unsyncedWorkouts = await db.table('workouts').where('synced').equals(0).count();
-            setPendingSyncs(unsyncedWorkouts);
-
-            // Fetch Weekly History (Last 7 Days)
-            const today = new Date();
-            const last7Days = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(today.getDate() - i);
-                last7Days.push(d.toISOString().split('T')[0]);
-            }
-
-            const history = await db.table('workouts')
-                .where('date')
-                .anyOf(last7Days)
-                .toArray();
-
-            // Map history to days
-            const weekData = last7Days.map(date => {
-                const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-                const found = history.find(h => h.date === date && h.user_id === storedUser?.id);
-                return { date, day: dayName, completed: !!found };
-            });
-            setWeeklyHistory(weekData);
-
-            // Calculate Streak (Simple version: count consecutive days backwards from today/yesterday)
-            // Ideally this would be more robust but this works for "Hook Model" MVP
-            let streakCount = 0;
-            const workouts = await db.table('workouts')
-                .where('user_id').equals(storedUser?.id || 0)
-                .reverse()
-                .sortBy('date');
-
-            // Using simple "workouts this week" as a proxy for engagement for this specific view
-            setCurrentStreak(history.length); // Showing "Weekly Active Days" as streak for this view context
+            // Sync Status - In Supabase, we assume synced unless we implement offline queue
+            setPendingSyncs(0);
 
             setLoading(false);
         }

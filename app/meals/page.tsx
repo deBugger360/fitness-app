@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import WaterCounter from "@/features/nutrition/components/WaterCounter";
 import MealLogger from "@/features/nutrition/components/MealLogger";
 import DietAnalysisModal from "@/features/nutrition/components/DietAnalysisModal";
@@ -11,7 +11,7 @@ import DietScoreCard from "@/features/nutrition/components/DietScoreCard";
 import { usePersonalizedPlan } from "@/features/plan/hooks/usePersonalizedPlan";
 
 export default function MealsPage() {
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [isDietModalOpen, setIsDietModalOpen] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
 
@@ -20,10 +20,9 @@ export default function MealsPage() {
 
     useEffect(() => {
         const initUser = async () => {
-            let userId = 1;
-            const user = await db.table('users').limit(1).first();
-            if (user) userId = user.id;
-            setCurrentUserId(userId);
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setCurrentUserId(user?.id || null);
         };
         initUser();
     }, []);
