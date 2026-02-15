@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.95.3",
     "dexie": "^4.3.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
