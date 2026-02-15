@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import MobileLayout from "@/components/MobileLayout";
-import SyncProvider from "@/components/SyncProvider";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import NotificationManager from "@/components/NotificationManager";
+import MobileLayout from "@/features/core/components/MobileLayout";
+import SyncProvider from "@/features/core/components/SyncProvider";
+import { ThemeProvider } from "@/features/core/components/ThemeProvider";
+import NotificationManager from "@/features/core/components/NotificationManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { db } from "@/lib/db";
-import WaterCounter from "@/components/WaterCounter";
-import MealLogger from "@/components/MealLogger";
-import DietAnalysisModal from "@/components/DietAnalysisModal";
+import WaterCounter from "@/features/nutrition/components/WaterCounter";
+import MealLogger from "@/features/nutrition/components/MealLogger";
+import DietAnalysisModal from "@/features/nutrition/components/DietAnalysisModal";
 import { Sparkles, Utensils } from "lucide-react";
 
-import DietScoreCard from "@/components/DietScoreCard";
-import { usePersonalizedPlan } from "@/hooks/usePersonalizedPlan";
+import DietScoreCard from "@/features/nutrition/components/DietScoreCard";
+import { usePersonalizedPlan } from "@/features/plan/hooks/usePersonalizedPlan";
 
 export default function MealsPage() {
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { db } from '@/lib/db';
-import AnalyticsEngine from '@/components/AnalyticsEngine';
-import Skeleton from "@/components/Skeleton";
+import AnalyticsEngine from '@/features/analytics/components/AnalyticsEngine';
+import Skeleton from "@/features/core/components/Skeleton";
 
 export default function StatsPage() {
     const [data, setData] = useState<{ workouts: any[], sugar: any[], meals: any[] }>({ workouts: [], sugar: [], meals: [] });

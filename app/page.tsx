@@ -5,14 +5,14 @@ import { db } from "@/lib/db";
 import { Check, Droplets, Trophy, Flame, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import WorkoutCard from "@/components/WorkoutCard";
-import FastingTimer from "@/components/FastingTimer";
-import WaterCounter from "@/components/WaterCounter";
-import WeightLogModal from "@/components/WeightLogModal";
-import Skeleton from "@/components/Skeleton";
-import { usePersonalizedPlan } from "@/hooks/usePersonalizedPlan";
-import MilestoneLink from "@/components/MilestoneLink";
-import RecommendationEngine from "@/components/RecommendationEngine";
+import WorkoutCard from "@/features/workouts/components/WorkoutCard";
+import FastingTimer from "@/features/nutrition/components/FastingTimer";
+import WaterCounter from "@/features/nutrition/components/WaterCounter";
+import WeightLogModal from "@/features/body/components/WeightLogModal";
+import Skeleton from "@/features/core/components/Skeleton";
+import { usePersonalizedPlan } from "@/features/plan/hooks/usePersonalizedPlan";
+import MilestoneLink from "@/features/gamification/components/MilestoneLink";
+import RecommendationEngine from "@/features/analytics/components/RecommendationEngine";
 
 export default function Dashboard() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
