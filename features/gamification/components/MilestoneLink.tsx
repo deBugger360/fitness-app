@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from '@/utils/supabase/client';
 import { Trophy, Star, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 
 interface MilestoneLinkProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
 }
 
 export default function MilestoneLink({ currentUserId }: MilestoneLinkProps) {
@@ -18,7 +18,14 @@ export default function MilestoneLink({ currentUserId }: MilestoneLinkProps) {
         if (!currentUserId) return;
 
         const findNextMilestone = async () => {
-            const workouts = await db.table('workouts').where('user_id').equals(currentUserId).count();
+            const supabase = createClient();
+            const { count } = await supabase
+                .from('workouts')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', currentUserId);
+
+            const workouts = count || 0;
+
             // Simple logic: determine next major milestone based on count
             // 1 -> 5 -> 20 -> 100
             let target = 1;

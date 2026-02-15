@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 
 export interface Recommendation {
     id: string;
@@ -8,28 +8,40 @@ export interface Recommendation {
     priority: 'high' | 'medium' | 'low';
 }
 
-export const generateRecommendations = async (userId: number): Promise<Recommendation[]> => {
+export const generateRecommendations = async (userId: string): Promise<Recommendation[]> => {
     const recommendations: Recommendation[] = [];
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch recent data (last 7 days)
-    const workouts = await db.table('workouts')
-        .where('user_id').equals(userId)
-        .reverse()
-        .limit(7)
-        .toArray();
+    const supabase = createClient();
 
-    const meals = await db.table('meals')
-        .where('user_id').equals(userId)
-        .reverse()
-        .limit(7)
-        .toArray();
+    // Fetch recent data (last 7 days)
+    const { data: workoutsData } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(7);
 
-    const sugarLogs = await db.table('sugar_logs')
-        .where('user_id').equals(userId)
-        .reverse()
-        .limit(14)
-        .toArray();
+    const workouts = workoutsData || [];
+
+    const { data: mealsData } = await supabase
+        .from('meals')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(7);
+
+    const meals = mealsData || [];
+
+    const { data: sugarLogsData } = await supabase
+        .from('sugar_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(14);
+
+    const sugarLogs = sugarLogsData || [];
 
     // 1. Workout Intensity Logic
     const recentWorkouts = workouts.slice(0, 3);
@@ -70,51 +82,52 @@ export const generateRecommendations = async (userId: number): Promise<Recommend
         });
     }
 
-    // 2. Hydration Logic
-    const avgWater = meals.reduce((acc, m) => acc + (m.water_liters || 0), 0) / (meals.length || 1);
-    if (avgWater < 2.0) {
+    const averageIntensity = recentWorkouts.reduce((acc: number, m: any) => acc + (m.morning_hiit_completed ? 1 : 0), 0) / (recentWorkouts.length || 1);
+
+    // 2. Hydration Check
+    // If average cups < 1 over last week, recommend Green Tea / Water
+    const averageTea = meals.reduce((acc: number, m: any) => acc + (m.green_tea_cups || 0), 0) / (meals.length || 1);
+
+    if (averageTea < 1.0) {
         recommendations.push({
-            id: 'hydration_low',
-            category: 'hydration',
-            title: 'Hydration Alert',
-            message: `Your average is only ${avgWater.toFixed(1)}L. Aim for 3L today to boost energy.`,
+            id: 'hydration-boost',
+            category: 'nutrition',
+            title: 'Hydration Boost',
+            message: 'You\'re averaging less than 1 cup of Green Tea. Aim for 2 cups daily for metabolism.',
             priority: 'high'
-        });
-    } else if (avgWater > 2.5) {
-        recommendations.push({
-            id: 'hydration_good',
-            category: 'hydration',
-            title: 'Great Hydration!',
-            message: "You're hitting your water goals. Keep it up for clearer skin.",
-            priority: 'low'
         });
     }
 
-    // 3. Sugar Reduction Logic
-    const recentSlips = sugarLogs.filter(s => s.type === 'intake').length;
-    const recentCravs = sugarLogs.filter(s => s.type === 'craving').length;
+    // 3. Sugar Reduction
+    // If sugar slips > 2 in last week
+    const slips = sugarLogs.filter((s: any) => s.type === 'intake').length;
+    const resisted = sugarLogs.filter((s: any) => s.type === 'craving' && s.success_resisted).length;
 
-    if (recentSlips > 3) {
+    if (slips > 2) {
         recommendations.push({
-            id: 'sugar_warning',
+            id: 'sugar-alert',
             category: 'nutrition',
-            title: 'Sugar Spike Detected',
-            message: "You've had a few sugar slips recently. Try replacing your next craving with fruit.",
-            priority: 'high'
-        });
-    } else if (recentCravs > 2 && recentSlips === 0) {
-        recommendations.push({
-            id: 'sugar_win',
-            category: 'nutrition',
-            title: 'Willpower of Steel',
-            message: "You've resisted multiple cravings lately. Amazing discipline!",
+            title: 'Sugar Watch',
+            message: `You've had ${slips} sugar slips recently. Try formatting cravings with a 10m timer.`,
             priority: 'medium'
         });
     }
 
-    // 4. Habit Improvement
-    const compliants = meals.filter(m => m.if_compliant).length;
-    if (compliants < 3 && meals.length >= 3) {
+    if (resisted > 3) {
+        recommendations.push({
+            id: 'sugar-win',
+            category: 'habit',
+            title: 'Willpower Warrior',
+            message: `You've resisted ${resisted} cravings! Keep that momentum.`,
+            priority: 'low'
+        });
+    }
+
+    // 4. Habit Stacking
+    // If workout consistency is low but meal logging is high
+    const workoutConsistency = recentWorkouts.length; // Simple count of days with logs
+    const mealConsistency = meals.reduce((acc: number, m: any) => acc + (m.lunch || m.dinner ? 1 : 0), 0);
+    if (mealConsistency > 5 && workoutConsistency < 3) { // Example condition
         recommendations.push({
             id: 'fasting_tip',
             category: 'habit',

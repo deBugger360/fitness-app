@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from 'react';
-import { db } from '@/lib/db';
+
 import { useRouter } from 'next/navigation';
 import { User, Activity, Ruler, Weight, Target, ArrowRight, Camera, Check, Flame, Zap, Dumbbell, Sparkles } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 const steps = [
     { id: 1, title: "Welcome!", subtitle: "Let's personalize your experience." },
@@ -30,6 +31,7 @@ const goalOptions = [
 
 export default function OnboardingWizard() {
     const router = useRouter();
+    const supabase = createClient();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
@@ -82,37 +84,38 @@ export default function OnboardingWizard() {
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            // Check if ANY user exists (to update instead of create duplicates if re-running)
-            // But usually onboarding is for new users.
-            // Let's clear any partial "Default Athlete" if it exists or update it.
-            const existing = await db.table('users').limit(1).first();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                // Should potentially redirect to signup if no user, but let's assume this flow happens after signup
+                // Or maybe we create an anonymous user? 
+                // For now, let's assume the user is already authenticated via the new Auth flow
+                throw new Error("User not authenticated");
+            }
 
             const userData = {
+                id: user.id, // Supabase ID
                 name: formData.name,
-                age: parseInt(formData.name) || 25, // Fallback if parsing fails, though unlikely with number type input
+                age: parseInt(formData.age) || 25,
                 gender: formData.gender,
                 height_cm: parseFloat(formData.height_cm),
                 weight_kg: parseFloat(formData.weight_kg),
                 activity_level: formData.activity_level,
-                goals: formData.goals, // Stored as array
+                goals: formData.goals,
                 photo: formData.photo,
-                onboarded: true // Mark as onboarded
+                // onboarded: true // No longer needed as we check profile existence
             };
 
-            if (Object.keys(userData).includes('age')) {
-                userData.age = parseInt(formData.age) || 0;
-            }
+            const { error } = await supabase
+                .from('profiles')
+                .upsert(userData);
 
-            if (existing) {
-                await db.table('users').update(existing.id, userData);
-            } else {
-                await db.table('users').add(userData);
-            }
+            if (error) throw error;
 
             // Redirect to dashboard
             router.push('/');
         } catch (error) {
             console.error("Onboarding error:", error);
+            // Handling error display to user would be good here
         } finally {
             setLoading(false);
         }

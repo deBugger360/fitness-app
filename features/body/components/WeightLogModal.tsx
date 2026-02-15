@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import { Scale, Check, X } from "lucide-react";
 
 interface WeightLogModalProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -24,7 +24,8 @@ const WeightLogModal: React.FC<WeightLogModalProps> = ({ currentUserId, isOpen, 
         setSaving(true);
 
         try {
-            await db.table('body_stats').add({
+            const supabase = createClient();
+            await supabase.from('body_stats').insert({
                 user_id: currentUserId,
                 date: new Date().toISOString(), // Full ISO timestamp for logs
                 weight_kg: parseFloat(weight) || 0,
@@ -34,7 +35,7 @@ const WeightLogModal: React.FC<WeightLogModalProps> = ({ currentUserId, isOpen, 
 
             // Also update user profile if weight changed
             if (weight) {
-                await db.table('users').update(currentUserId, { weight_kg: parseFloat(weight) });
+                await supabase.from('profiles').update({ weight_kg: parseFloat(weight) }).eq('id', currentUserId);
             }
 
             setSaving(false);
@@ -48,6 +49,8 @@ const WeightLogModal: React.FC<WeightLogModalProps> = ({ currentUserId, isOpen, 
             setSaving(false);
         }
     };
+
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">

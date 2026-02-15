@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from "@/utils/supabase/client";
 import planData from '@/fitness_plan.json';
 import { Save, Coffee, Utensils, Zap, Clock, ChevronDown } from 'lucide-react';
 
 interface MealLoggerProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
 }
 
 const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
@@ -28,11 +28,14 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
     useEffect(() => {
         if (!currentUserId) return;
         const loadToday = async () => {
+            const supabase = createClient();
             const today = new Date().toISOString().split('T')[0];
-            const log = await db.table('meals')
-                .where('date').equals(today)
-                .and(item => item.user_id === currentUserId)
-                .first();
+            const { data: log } = await supabase
+                .from('meals')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
             if (log) {
                 setGreenTeaCups(log.green_tea_cups || 0);
@@ -60,10 +63,13 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
         const dinnerStr = `${dinner.protein} + ${dinner.carb} + ${dinner.veg}`;
 
         try {
-            const existing = await db.table('meals')
-                .where('date').equals(today)
-                .and(item => item.user_id === currentUserId)
-                .first();
+            const supabase = createClient();
+            const { data: existing } = await supabase
+                .from('meals')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
             const payload: any = {
                 user_id: currentUserId,
@@ -77,9 +83,9 @@ const MealLogger: React.FC<MealLoggerProps> = ({ currentUserId }) => {
             if (dinnerStr.length > 6) payload.dinner = dinnerStr;
 
             if (existing) {
-                await db.table('meals').update(existing.id, payload);
+                await supabase.from('meals').update(payload).eq('id', existing.id);
             } else {
-                await db.table('meals').add({
+                await supabase.from('meals').insert({
                     ...payload,
                     lunch: payload.lunch || '',
                     dinner: payload.dinner || '',

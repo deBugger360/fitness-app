@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from "@/utils/supabase/client";
 import { Sparkles, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface DietScoreCardProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
 }
 
 export default function DietScoreCard({ currentUserId }: DietScoreCardProps) {
-    const [stats, setStats] = useState({ healthy: 0, moderate: 0, unhealthy: 0, total: 0 });
+    const [stats, setStats] = useState<{ healthy: number, moderate: number, unhealthy: number, total: number }>({ healthy: 0, moderate: 0, unhealthy: 0, total: 0 });
     const [score, setScore] = useState(0);
     const [loading, setLoading] = useState(true);
 
@@ -18,14 +18,18 @@ export default function DietScoreCard({ currentUserId }: DietScoreCardProps) {
 
         const fetchStats = async () => {
             try {
+                const supabase = createClient();
                 // Fetch all reflections (or limit to last 7/30 days)
                 // For simplicity, let's just get all for now to show accumulated data
-                const reflections = await db.table('diet_reflections')
-                    .where('user_id').equals(currentUserId)
-                    .toArray();
+                const { data: reflectionsData } = await supabase
+                    .from('diet_reflections')
+                    .select('*')
+                    .eq('user_id', currentUserId);
+
+                const reflections = reflectionsData || [];
 
                 let h = 0, m = 0, u = 0;
-                reflections.forEach(r => {
+                reflections.forEach((r: any) => {
                     if (r.quality === 'healthy') h++;
                     else if (r.quality === 'moderate') m++;
                     else u++;

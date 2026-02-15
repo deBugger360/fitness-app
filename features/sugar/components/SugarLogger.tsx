@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import { AlertTriangle, ThumbsUp, Moon } from "lucide-react";
 
 interface SugarLoggerProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
     onLogAdded: () => void;
 }
 
@@ -39,7 +39,8 @@ const SugarLogger: React.FC<SugarLoggerProps> = ({ currentUserId, onLogAdded }) 
         };
 
         try {
-            await db.table('sugar_logs').add(logData);
+            const supabase = createClient();
+            await supabase.from('sugar_logs').insert(logData);
             onLogAdded();
             // Reset
             setItem("");

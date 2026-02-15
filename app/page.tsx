@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { db } from "@/lib/db";
+
 import { Check, Droplets, Trophy, Flame, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -14,19 +14,38 @@ import { usePersonalizedPlan } from "@/features/plan/hooks/usePersonalizedPlan";
 import MilestoneLink from "@/features/gamification/components/MilestoneLink";
 import RecommendationEngine from "@/features/analytics/components/RecommendationEngine";
 
+import { createClient } from "@/utils/supabase/client";
+
 export default function Dashboard() {
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
   const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
     const initUser = async () => {
       try {
-        const user = await db.table('users').limit(1).first();
-        if (user && user.onboarded) {
-          setCurrentUserId(user.id);
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // Check if profile exists
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            setCurrentUserId(user.id);
+          } else {
+            // User exists in auth but no profile? Potentially incomplete onboarding.
+            // Or maybe triggered by insert trigger? 
+            // If trigger works, profile exists. 
+            // If manual onboarding needed and skipped, we redirect.
+            router.push('/onboarding');
+          }
         } else {
-          router.push('/onboarding');
+          router.push('/login');
         }
       } catch (err) {
         console.error("Error initializing user:", err);

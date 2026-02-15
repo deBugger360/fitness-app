@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/db';
+import { createClient } from '@/utils/supabase/client';
 import planData from '@/fitness_plan.json';
 
 export interface ExercisePlan {
@@ -19,7 +19,7 @@ export interface PersonalizedPlan {
     streak: number;
 }
 
-export function usePersonalizedPlan(currentUserId: number | null) {
+export function usePersonalizedPlan(currentUserId: string | null) {
     const [plan, setPlan] = useState<PersonalizedPlan | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -32,6 +32,7 @@ export function usePersonalizedPlan(currentUserId: number | null) {
             // 1. Get Base Plan from JSON
             const scheduleString = (planData.weekly_schedule as any)[dayName];
             let workoutType = 'Rest Day';
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             let rawExercises: string[] = [];
 
             if (scheduleString && scheduleString !== 'rest') {
@@ -52,8 +53,13 @@ export function usePersonalizedPlan(currentUserId: number | null) {
 
             if (currentUserId) {
                 try {
+                    const supabase = createClient();
                     // Fetch User Profile
-                    const user = await db.table('users').get(currentUserId);
+                    const { data: user } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', currentUserId)
+                        .single();
 
                     if (user) {
                         // Calculate Water Goal: Weight (kg) * 0.033 + Activity Buffer
@@ -75,14 +81,17 @@ export function usePersonalizedPlan(currentUserId: number | null) {
                     const startDate = new Date();
                     startDate.setDate(endDate.getDate() - 14);
 
-                    const history = await db.table('workouts')
-                        .where('date')
-                        .between(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0])
-                        .and(w => w.user_id === currentUserId)
-                        .toArray();
+                    const { data: historyData } = await supabase
+                        .from('workouts')
+                        .select('*')
+                        .gte('date', startDate.toISOString().split('T')[0])
+                        .lte('date', endDate.toISOString().split('T')[0])
+                        .eq('user_id', currentUserId);
+
+                    const history = historyData || [];
 
                     // Calculate consistency
-                    const workoutCount = history.filter(h => h.morning_hiit_completed === 1).length;
+                    const workoutCount = history.filter((h: any) => h.morning_hiit_completed === 1).length;
 
                     // Level logic: Combine frequency + self-reported activity
                     if (workoutCount > 8 || (user?.activity_level === 'active' && workoutCount > 5)) {

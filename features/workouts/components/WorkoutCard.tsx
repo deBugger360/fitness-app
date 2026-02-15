@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import { Check, Trophy } from 'lucide-react';
-import { db } from '@/lib/db';
+import { createClient } from "@/utils/supabase/client";
 
 interface WorkoutCardProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
     workoutType: string;
     exercises: any[];
     onSave?: () => void;
@@ -21,29 +21,30 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
     React.useEffect(() => {
         if (!currentUserId) return;
         const loadToday = async () => {
+            const supabase = createClient();
             const today = new Date().toISOString().split('T')[0];
-            const existing = await db.table('workouts')
-                .where('date').equals(today)
-                .and(w => w.user_id === currentUserId)
-                .first();
+            try {
+                const { data: existing } = await supabase
+                    .from('workouts')
+                    .select('*')
+                    .eq('date', today)
+                    .eq('user_id', currentUserId)
+                    .single();
 
-            if (existing) {
-                if (existing.exercisesCompleted) {
-                    setCompletedExercises(new Set(existing.exercisesCompleted));
-                }
-                if (existing.evening_walk_minutes) {
-                    setEveningWalkMinutes(existing.evening_walk_minutes);
-                }
+                if (existing) {
+                    if (existing.exercises_completed) {
+                        setCompletedExercises(new Set(existing.exercises_completed));
+                    }
+                    if (existing.evening_walk_minutes) {
+                        setEveningWalkMinutes(existing.evening_walk_minutes);
+                    }
 
-                // Determine saved states
-                if (existing.morning_hiit_completed === 1) setMorningSaved(true);
-                // For evening, if minutes > 0, we can consider it saved or just rely on manual save action. 
-                // Let's rely on explicit save for "Checkmark" visual, but persistence is key.
-                // Actually, let's infer "Saved" if we pulled data, but user might want to update.
-                // Let's use a timeout for the "Saved!" feedback, but keep the data loaded.
-                // For the "Completed" badge check:
-                if (existing.morning_hiit_completed === 1) setMorningSaved(true);
-                if (existing.evening_walk_minutes > 0) setEveningSaved(true);
+                    // Determine saved states
+                    if (existing.morning_hiit_completed === 1) setMorningSaved(true);
+                    if (existing.evening_walk_minutes > 0) setEveningSaved(true);
+                }
+            } catch (error) {
+                console.error("Error loading workout:", error);
             }
         };
         loadToday();
@@ -69,24 +70,25 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
         const isHiitDone = exercisesList.length > 0;
 
         try {
-            const existing = await db.table('workouts')
-                .where('date').equals(today)
-                .and(w => w.user_id === currentUserId)
-                .first();
+            const supabase = createClient();
+            const { data: existing } = await supabase
+                .from('workouts')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
-            const payload = {
+            const payload: any = {
                 user_id: currentUserId,
                 date: today,
                 morning_hiit_completed: isHiitDone ? 1 : 0,
-                exercisesCompleted: exercisesList,
-                pushups: exercisesList.some(e => e.includes('pushups')) ? 20 : 0, // Legacy fallback
-                squats: exercisesList.some(e => e.includes('squats')) ? 20 : 0
+                exercises_completed: exercisesList
             };
 
             if (existing) {
-                await db.table('workouts').update(existing.id, payload);
+                await supabase.from('workouts').update(payload).eq('id', existing.id);
             } else {
-                await db.table('workouts').add({ ...payload, evening_walk_minutes: 0, synced: 0 });
+                await supabase.from('workouts').insert({ ...payload, evening_walk_minutes: 0, synced: 0 });
             }
 
             setMorningSaved(true);
@@ -101,22 +103,24 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
         const today = new Date().toISOString().split('T')[0];
 
         try {
-            const existing = await db.table('workouts')
-                .where('date').equals(today)
-                .and(w => w.user_id === currentUserId)
-                .first();
+            const supabase = createClient();
+            const { data: existing } = await supabase
+                .from('workouts')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
-            const payload = {
+            const payload: any = {
                 user_id: currentUserId,
                 date: today,
-                evening_walk_minutes: eveningWalkMinutes,
-                walk_minutes: eveningWalkMinutes // Legacy
+                evening_walk_minutes: eveningWalkMinutes
             };
 
             if (existing) {
-                await db.table('workouts').update(existing.id, payload);
+                await supabase.from('workouts').update(payload).eq('id', existing.id);
             } else {
-                await db.table('workouts').add({ ...payload, morning_hiit_completed: 0, exercisesCompleted: [], synced: 0 });
+                await supabase.from('workouts').insert({ ...payload, morning_hiit_completed: 0, exercises_completed: [], synced: 0 });
             }
 
             setEveningSaved(true);
@@ -209,8 +213,8 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                     onClick={saveMorningHiit}
                     disabled={morningSaved || completedExercises.size === 0}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${morningSaved
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
-                            : 'bg-black dark:bg-slate-700 text-white hover:bg-gray-800 dark:hover:bg-slate-600 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
+                        : 'bg-black dark:bg-slate-700 text-white hover:bg-gray-800 dark:hover:bg-slate-600 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
                         }`}
                 >
                     {morningSaved ? 'Morning Workout Saved' : 'Save Morning HIIT'}
@@ -283,8 +287,8 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({ currentUserId, workoutType, e
                     onClick={saveEveningCardio}
                     disabled={eveningSaved || eveningWalkMinutes === 0}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${eveningSaved
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
-                            : 'bg-black dark:bg-slate-700 text-white hover:bg-gray-800 dark:hover:bg-slate-600 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
+                        : 'bg-black dark:bg-slate-700 text-white hover:bg-gray-800 dark:hover:bg-slate-600 shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed'
                         }`}
                 >
                     {eveningSaved ? 'Evening Cardio Saved' : 'Save Evening Walk'}

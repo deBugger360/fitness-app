@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { db } from "@/lib/db";
+import { createClient } from "@/utils/supabase/client";
 import { Droplets } from "lucide-react";
 
 interface WaterCounterProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
     waterGoal?: number;
 }
 
@@ -15,11 +15,14 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
     useEffect(() => {
         if (!currentUserId) return;
         const fetchWater = async () => {
+            const supabase = createClient();
             const today = new Date().toISOString().split('T')[0];
-            const mealLog = await db.table('meals')
-                .where('date').equals(today)
-                .and(item => item.user_id === currentUserId)
-                .first();
+            const { data: mealLog } = await supabase
+                .from('meals')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
             if (mealLog && mealLog.water_liters) {
                 setWaterIntake(mealLog.water_liters);
@@ -28,24 +31,27 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
             }
         };
         fetchWater();
-    }, [currentUserId]); // Refetch when user changes
+    }, [currentUserId]);
 
     const updateWater = async (amount: number) => {
         if (!currentUserId) return;
         const newAmount = Math.max(0, parseFloat((waterIntake + amount).toFixed(2)));
         setWaterIntake(newAmount);
 
+        const supabase = createClient();
         const today = new Date().toISOString().split('T')[0];
         try {
-            const existing = await db.table('meals')
-                .where('date').equals(today)
-                .and(item => item.user_id === currentUserId)
-                .first();
+            const { data: existing } = await supabase
+                .from('meals')
+                .select('*')
+                .eq('date', today)
+                .eq('user_id', currentUserId)
+                .single();
 
             if (existing) {
-                await db.table('meals').update(existing.id, { water_liters: newAmount });
+                await supabase.from('meals').update({ water_liters: newAmount }).eq('id', existing.id);
             } else {
-                await db.table('meals').add({
+                await supabase.from('meals').insert({
                     user_id: currentUserId,
                     date: today,
                     water_liters: newAmount,

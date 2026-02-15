@@ -6,7 +6,7 @@ import { Sparkles, ArrowRight, Activity, Droplets, Zap, Clock } from 'lucide-rea
 import { useTheme } from 'next-themes';
 
 interface RecommendationEngineProps {
-    currentUserId: number | null;
+    currentUserId: string | null;
 }
 
 export default function RecommendationEngine({ currentUserId }: RecommendationEngineProps) {
