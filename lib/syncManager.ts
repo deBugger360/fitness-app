@@ -99,8 +99,10 @@ class SyncManager {
     }
 }
 
-// Export a getter instead of a const to avoid initialization order issues
-export const getSyncManager = () => SyncManager.getInstance();
+// Export a centralized getter function
+export function getSyncManager() {
+    return SyncManager.getInstance();
+}
 
 export const initSyncManager = async () => {
     const manager = getSyncManager();

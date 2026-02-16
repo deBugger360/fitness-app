@@ -254,7 +254,7 @@ export default function ProfilePage() {
 
                 <div className={`mt-2 p-3 rounded-xl text-xs font-medium flex items-center justify-between transition-colors duration-300 ${syncStatus === 'syncing' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300' : 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300'}`}>
                     <span>{syncStatus === 'syncing' ? 'Updating data...' : 'All systems operational'}</span>
-                    {syncStatus === 'synced' && <span className="text-lg">✨</span>}
+                    {syncStatus === 'synced' && <CheckCircle2 className="w-4 h-4" />}
                 </div>
             </section>
 
