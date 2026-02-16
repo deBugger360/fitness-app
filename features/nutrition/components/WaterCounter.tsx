@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Droplets } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface WaterCounterProps {
     currentUserId: string | null;
@@ -139,9 +140,11 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
                 </div>
 
                 <div className="h-3 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden mb-6 transition-colors duration-300">
-                    <div
-                        className="h-full bg-blue-500 dark:bg-blue-600 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${waterProgress}%` }}
+                    <motion.div
+                        className="h-full bg-blue-500 dark:bg-blue-600 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${waterProgress}%` }}
+                        transition={{ type: "spring", stiffness: 50, damping: 10 }}
                     />
                 </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
+import { motion } from "framer-motion";
 
 const FastingTimer: React.FC = () => {
     const [status, setStatus] = useState<"waiting" | "eating" | "closed">("waiting");
@@ -62,7 +63,10 @@ const FastingTimer: React.FC = () => {
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between mb-4 transition-colors duration-300">
+        <motion.div
+            whileHover={{ scale: 1.02 }}
+            className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex items-center justify-between mb-4 transition-colors duration-300"
+        >
             <div className="flex items-center">
                 <div className={`p-2 rounded-full mr-3 bg-gray-50 dark:bg-slate-800 shadow-inner group transition-colors duration-300`}>
                     <Clock className={`w-5 h-5 ${getStatusColor()}`} />
@@ -71,28 +75,37 @@ const FastingTimer: React.FC = () => {
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-400 uppercase tracking-wide transition-colors duration-300">
                         {status === "eating" ? "Eating Window" : "Fasting Status"}
                     </h3>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300">{timeLeft}</p>
+                    <motion.p
+                        key={timeLeft}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-lg font-bold text-gray-900 dark:text-white transition-colors duration-300"
+                    >
+                        {timeLeft}
+                    </motion.p>
                 </div>
             </div>
 
             {status === "eating" && (
                 <div className="relative w-12 h-12 flex items-center justify-center">
-                    {/* Simple SVG Circular Progress */}
+                    {/* Animated SVG Circular Progress */}
                     <svg className="w-full h-full transform -rotate-90">
                         <circle cx="24" cy="24" r="20" className="stroke-gray-100 dark:stroke-slate-800 transition-colors duration-300" strokeWidth="4" fill="none" />
-                        <circle
+                        <motion.circle
                             cx="24" cy="24" r="20"
                             className="stroke-orange-600 dark:stroke-orange-500 transition-colors duration-300"
                             strokeWidth="4"
                             fill="none"
                             strokeDasharray="125.6"
-                            strokeDashoffset={125.6 - (125.6 * progress) / 100}
+                            initial={{ strokeDashoffset: 125.6 }}
+                            animate={{ strokeDashoffset: 125.6 - (125.6 * progress) / 100 }}
+                            transition={{ duration: 1, ease: "easeInOut" }}
                             strokeLinecap="round"
                         />
                     </svg>
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 };
 

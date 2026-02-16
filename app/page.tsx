@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-
 import { Check, Droplets, Trophy, Flame, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 import WorkoutCard from "@/features/workouts/components/WorkoutCard";
 import FastingTimer from "@/features/nutrition/components/FastingTimer";
@@ -78,7 +78,12 @@ export default function Dashboard() {
 
   return (
     <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <header className="mb-10 flex justify-between items-start animate-fade-in-up">
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-10 flex justify-between items-start"
+      >
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">
             Today's Plan
@@ -95,77 +100,116 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsWeightModalOpen(true)}
-            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 group"
+            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all group"
             aria-label="Log Weight"
           >
             <Plus className="w-5 h-5 transition-transform group-active:rotate-90" />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/profile')}
-            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95"
+            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
             aria-label="Profile"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-          </button>
+          </motion.button>
         </div>
-      </header>
+      </motion.header>
 
-      {/* Smart Recommendations */}
-      <div className="animate-fade-in-up" style={{ animationDelay: '10ms' }}>
-        {currentUserId && <RecommendationEngine currentUserId={currentUserId} />}
-      </div>
+      {/* Smart Recommendations - Adaptive: Suggestion first */}
+      <AnimatePresence mode="wait">
+        {currentUserId && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8"
+          >
+            <RecommendationEngine currentUserId={currentUserId} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Milestone Progress (Hook Model: Investment) */}
-      <div className="animate-fade-in-up hover:scale-[1.01] transition-transform duration-300" style={{ animationDelay: '50ms' }}>
-        {currentUserId && <MilestoneLink currentUserId={currentUserId} />}
-      </div>
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: {
+              staggerChildren: 0.1
+            }
+          }
+        }}
+      >
+        {/* Reordered for "Glanceability" */}
 
-      {/* Habit Timers */}
-      <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-        <FastingTimer />
-      </div>
+        {/* Stats Row */}
+        <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }} className="grid grid-cols-2 gap-4">
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-white dark:bg-slate-900 p-5 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-start justify-center"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 mb-3">
+              <div className="w-2.5 h-2.5 bg-current rounded-full animate-pulse"></div>
+            </div>
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{workoutData.fastingWindow}</span>
+            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Fasting Window</span>
+          </motion.div>
 
-      {/* Stats Card */}
-      <div className="grid grid-cols-2 gap-4 mb-10 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-start justify-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
-          <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 mb-3">
-            <div className="w-2.5 h-2.5 bg-current rounded-full animate-pulse"></div>
-          </div>
-          <span className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">{workoutData.fastingWindow}</span>
-          <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Fasting Window</span>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-start justify-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
-          <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 mb-3">
-            <Flame className="w-5 h-5 fill-orange-500 dark:fill-orange-400" />
-          </div>
-          <div className="flex items-baseline space-x-1">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">{workoutData.streak}</span>
-            <span className="text-sm font-bold text-slate-400">Days</span>
-          </div>
-          <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Current Streak</span>
-        </div>
-      </div>
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="bg-white dark:bg-slate-900 p-5 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-start justify-center"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 mb-3">
+              <Flame className="w-5 h-5 fill-orange-500 dark:fill-orange-400" />
+            </div>
+            <div className="flex items-baseline space-x-1">
+              <span className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{workoutData.streak}</span>
+              <span className="text-sm font-bold text-slate-400">Days</span>
+            </div>
+            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Current Streak</span>
+          </motion.div>
+        </motion.div>
 
-      {/* Workout Section */}
-      <section className="mb-10 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        {/* Habit Timers & Milestone */}
+        <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }} className="space-y-6">
+          <MilestoneLink currentUserId={currentUserId} />
+          <FastingTimer />
+        </motion.div>
+      </motion.div>
+
+      {/* Main Action Sections */}
+      <motion.div
+        className="mt-8 space-y-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+      >
+        {/* Workout first as it is the primary daily action */}
         <WorkoutCard
           currentUserId={currentUserId}
           workoutType={workoutData.workoutType}
           exercises={workoutData.exercises}
           onSave={() => console.log("Workout Saved via Card!")}
         />
-      </section>
 
-      {/* Water Section */}
-      <div className="animate-fade-in-up" style={{ animationDelay: '400ms' }}>
         <WaterCounter
           currentUserId={currentUserId}
           waterGoal={workoutData.waterTarget}
         />
-      </div>
+      </motion.div>
 
       {/* Weight Modal */}
       <WeightLogModal
