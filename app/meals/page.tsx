@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import WaterCounter from "@/features/nutrition/components/WaterCounter";
 import MealLogger from "@/features/nutrition/components/MealLogger";
 import DietAnalysisModal from "@/features/nutrition/components/DietAnalysisModal";
-import { Sparkles, Utensils } from "lucide-react";
+import { Sparkles, Utensils, AlertTriangle } from "lucide-react";
 
 import DietScoreCard from "@/features/nutrition/components/DietScoreCard";
 import { usePersonalizedPlan } from "@/features/plan/hooks/usePersonalizedPlan";
@@ -34,19 +35,26 @@ export default function MealsPage() {
 
     return (
         <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-            <header className="mb-8 flex justify-between items-center">
+            <div className="flex justify-between items-end mb-8">
                 <div>
                     <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">Nutrition</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium transition-colors duration-300">Tracking & Analysis</p>
                 </div>
-                <button
-                    onClick={() => setIsDietModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105 active:scale-95 group"
-                >
-                    <Sparkles className="w-4 h-4 text-indigo-100 group-hover:text-white transition-colors" />
-                    <span className="font-bold text-sm">Analyze Meal</span>
-                </button>
-            </header>
+                <div className="flex gap-2">
+                    <Link href="/reality">
+                        <button className="p-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-full hover:bg-red-100 transition-colors">
+                            <AlertTriangle className="w-5 h-5" />
+                        </button>
+                    </Link>
+                    <button
+                        onClick={() => setIsDietModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105 active:scale-95 group"
+                    >
+                        <Sparkles className="w-4 h-4 text-indigo-100 group-hover:text-white transition-colors" />
+                        <span className="font-bold text-sm hidden sm:inline">Analyze</span>
+                    </button>
+                </div>
+            </div>
 
             <DietScoreCard key={refreshKey} currentUserId={currentUserId} />
 
