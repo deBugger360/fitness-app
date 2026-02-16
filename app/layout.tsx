@@ -5,6 +5,7 @@ import MobileLayout from "@/features/core/components/MobileLayout";
 import SyncProvider from "@/features/core/components/SyncProvider";
 import { ThemeProvider } from "@/features/core/components/ThemeProvider";
 import NotificationManager from "@/features/core/components/NotificationManager";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +61,7 @@ export default function RootLayout({
           <NotificationManager />
           <MobileLayout>
             {children}
+            <Toaster />
           </MobileLayout>
         </ThemeProvider>
       </body>

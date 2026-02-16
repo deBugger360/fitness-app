@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Utensils, ChartBar, User, ShieldHalf } from 'lucide-react';
+import { Home, Utensils, ChartBar, User, ShieldHalf, CheckSquare } from 'lucide-react';
 
 interface MobileLayoutProps {
     children: React.ReactNode;
@@ -13,11 +13,11 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     const pathname = usePathname();
 
     const tabs = [
-        { name: 'Workout', icon: Home, href: '/' },
+        { name: 'Plan', icon: Home, href: '/' },
+        { name: 'Foundations', icon: CheckSquare, href: '/foundations' },
         { name: 'Meals', icon: Utensils, href: '/meals' },
         { name: 'Sugar', icon: ShieldHalf, href: '/sugar' },
         { name: 'Stats', icon: ChartBar, href: '/stats' },
-        { name: 'Profile', icon: User, href: '/profile' },
     ];
 
     return (
@@ -41,8 +41,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                                 key={tab.name}
                                 href={tab.href}
                                 className={`flex flex-col items-center justify-center w-full h-full transition-all duration-300 tap-highlight-transparent group rounded-2xl mx-1 max-h-[64px] ${isActive
-                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20'
-                                        : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
+                                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20'
+                                    : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
                                     }`}
                             >
                                 <div className={`mb-1 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100 group-hover:scale-105'}`}>

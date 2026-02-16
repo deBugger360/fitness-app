@@ -78,7 +78,7 @@ export default function Dashboard() {
 
   return (
     <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <header className="mb-10 flex justify-between items-end animate-fade-in-up">
+      <header className="mb-10 flex justify-between items-start animate-fade-in-up">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors duration-300">
             Today's Plan
@@ -94,13 +94,23 @@ export default function Dashboard() {
             </span>
           </p>
         </div>
-        <button
-          onClick={() => setIsWeightModalOpen(true)}
-          className="p-3.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 group"
-          aria-label="Log Weight"
-        >
-          <Plus className="w-6 h-6 transition-transform group-active:rotate-90" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsWeightModalOpen(true)}
+            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 group"
+            aria-label="Log Weight"
+          >
+            <Plus className="w-5 h-5 transition-transform group-active:rotate-90" />
+          </button>
+
+          <button
+            onClick={() => router.push('/profile')}
+            className="p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95"
+            aria-label="Profile"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+          </button>
+        </div>
       </header>
 
       {/* Smart Recommendations */}
