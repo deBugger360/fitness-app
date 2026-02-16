@@ -17,7 +17,7 @@ export default function MealsPage() {
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Use the hook to get dynamic goals (water, fasting window)
-    const { plan } = usePersonalizedPlan(currentUserId);
+    const { plan, loading } = usePersonalizedPlan(currentUserId);
 
     useEffect(() => {
         const initUser = async () => {
@@ -59,7 +59,23 @@ export default function MealsPage() {
             <DietScoreCard key={refreshKey} currentUserId={currentUserId} />
 
             <div className="mb-8">
-                <WaterCounter currentUserId={currentUserId} waterGoal={plan?.waterTarget || 3} />
+                {loading || !plan ? (
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 animate-pulse">
+                        <div className="h-6 w-32 bg-slate-200 dark:bg-slate-800 rounded mb-4"></div>
+                        <div className="flex justify-between items-end mb-6">
+                            <div className="h-8 w-24 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                            <div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded"></div>
+                        </div>
+                        <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full mb-6"></div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                            <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                            <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+                        </div>
+                    </div>
+                ) : (
+                    <WaterCounter currentUserId={currentUserId} waterGoal={plan.waterTarget} />
+                )}
             </div>
 
             <section className="bg-white dark:bg-slate-900 rounded-[24px] p-6 shadow-sm dark:shadow-none border border-slate-100 dark:border-slate-800 mb-8 relative overflow-hidden transition-colors duration-300">

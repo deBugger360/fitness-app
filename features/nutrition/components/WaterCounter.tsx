@@ -14,51 +14,105 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
 
     useEffect(() => {
         if (!currentUserId) return;
-        const fetchWater = async () => {
-            const supabase = createClient();
-            const today = new Date().toISOString().split('T')[0];
-            const { data: mealLog } = await supabase
-                .from('meals')
-                .select('*')
-                .eq('date', today)
-                .eq('user_id', currentUserId)
-                .single();
 
-            if (mealLog && mealLog.water_liters) {
-                setWaterIntake(mealLog.water_liters);
-            } else {
-                setWaterIntake(0);
+        const supabase = createClient();
+        const today = new Date().toISOString().split('T')[0];
+        const storageKey = `water_${currentUserId}_${today}`;
+
+        // 1. Initial Fetch with Cache Fallback
+        const fetchWater = async () => {
+            // Check cache first for immediate render
+            const cached = localStorage.getItem(storageKey);
+            if (cached) setWaterIntake(parseFloat(cached));
+
+            try {
+                const { data: mealLog, error } = await supabase
+                    .from('meals')
+                    .select('*')
+                    .eq('date', today)
+                    .eq('user_id', currentUserId)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') throw error;
+
+                if (mealLog && mealLog.water_liters !== undefined) {
+                    setWaterIntake(mealLog.water_liters);
+                    localStorage.setItem(storageKey, mealLog.water_liters.toString());
+                } else if (!cached) {
+                    setWaterIntake(0);
+                }
+            } catch (err) {
+                console.log("Offline or error fetching water, using cache if available");
             }
         };
         fetchWater();
+
+        // 2. Realtime Subscription
+        const channel = supabase
+            .channel(`meals:water:${currentUserId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'meals',
+                filter: `user_id=eq.${currentUserId}`
+            }, (payload: any) => {
+                if (payload.new && payload.new.date === today && payload.new.water_liters !== undefined) {
+                    setWaterIntake(payload.new.water_liters);
+                    localStorage.setItem(storageKey, payload.new.water_liters.toString());
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [currentUserId]);
 
     const updateWater = async (amount: number) => {
         if (!currentUserId) return;
         const newAmount = Math.max(0, parseFloat((waterIntake + amount).toFixed(2)));
+        const today = new Date().toISOString().split('T')[0];
+        const storageKey = `water_${currentUserId}_${today}`;
+
+        // Optimistic UI update & Local Persistence
         setWaterIntake(newAmount);
+        localStorage.setItem(storageKey, newAmount.toString());
 
         const supabase = createClient();
-        const today = new Date().toISOString().split('T')[0];
+
         try {
-            const { data: existing } = await supabase
+            // Check if entry exists first to avoid UPSERT constraint issues
+            const { data: existing, error: fetchError } = await supabase
                 .from('meals')
-                .select('*')
-                .eq('date', today)
+                .select('id')
                 .eq('user_id', currentUserId)
+                .eq('date', today)
                 .single();
 
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                throw fetchError;
+            }
+
+            let error;
             if (existing) {
-                await supabase.from('meals').update({ water_liters: newAmount }).eq('id', existing.id);
+                const { error: updateError } = await supabase
+                    .from('meals')
+                    .update({ water_liters: newAmount })
+                    .eq('id', existing.id);
+                error = updateError;
             } else {
-                await supabase.from('meals').insert({
-                    user_id: currentUserId,
-                    date: today,
-                    water_liters: newAmount,
-                    lunch: '',
-                    dinner: '',
-                    green_tea_cups: 0
-                });
+                const { error: insertError } = await supabase
+                    .from('meals')
+                    .insert({
+                        user_id: currentUserId,
+                        date: today,
+                        water_liters: newAmount
+                    });
+                error = insertError;
+            }
+
+            if (error) {
+                console.error("Sync failed, saved locally:", JSON.stringify(error, null, 2));
             }
         } catch (error) {
             console.error("Failed to update water:", error);
@@ -75,8 +129,13 @@ const WaterCounter: React.FC<WaterCounterProps> = ({ currentUserId, waterGoal = 
             </h2>
             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
                 <div className="flex justify-between items-end mb-2">
-                    <span className="text-3xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-300">{waterIntake}<span className="text-lg text-gray-400 dark:text-slate-500 font-normal">L</span></span>
-                    <span className="text-sm text-gray-400 dark:text-slate-500 mb-1 transition-colors duration-300">Goal: {waterGoal}L</span>
+                    <span className="text-3xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-300">
+                        {Number(waterIntake).toFixed(2).replace(/\.?0+$/, '')}
+                        <span className="text-lg text-gray-400 dark:text-slate-500 font-normal">L</span>
+                    </span>
+                    <span className="text-sm text-gray-400 dark:text-slate-500 mb-1 transition-colors duration-300">
+                        Goal: {Number(waterGoal).toFixed(2).replace(/\.?0+$/, '')}L
+                    </span>
                 </div>
 
                 <div className="h-3 w-full bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden mb-6 transition-colors duration-300">

@@ -52,6 +52,9 @@ export function usePersonalizedPlan(currentUserId: string | null) {
             let fastingWindow = planData.profile.fasting_window; // Default base
 
             if (currentUserId) {
+                // Set loading true immediately when user changes/re-calculates to avoid stale data flash
+                setLoading(true);
+
                 try {
                     const supabase = createClient();
                     // Fetch User Profile
@@ -63,10 +66,13 @@ export function usePersonalizedPlan(currentUserId: string | null) {
 
                     if (user) {
                         // Calculate Water Goal: Weight (kg) * 0.033 + Activity Buffer
+                        // Rounding to nearest 0.5 for cleaner UX
                         let calculatedWater = (user.weight_kg || 75) * 0.033;
                         if (user.activity_level === 'active') calculatedWater += 0.5;
                         if (user.activity_level === 'very_active') calculatedWater += 1.0;
-                        waterTarget = parseFloat(calculatedWater.toFixed(1));
+
+                        // Round to nearest 0.5
+                        waterTarget = Math.round(calculatedWater * 2) / 2;
 
                         // Adjust Fasting Window based on Goals
                         if (user.goals && user.goals.includes('fat_loss')) {
