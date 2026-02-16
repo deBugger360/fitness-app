@@ -137,5 +137,31 @@ export const generateRecommendations = async (userId: string): Promise<Recommend
         });
     }
 
-    return recommendations.sort((a, b) => (a.priority === 'high' ? -1 : 1));
+    // 5. Walk Instead Engine (Truth #4)
+    // Check if NO workout logged today and it is getting late (e.g., after 18:00)
+    const currentHour = new Date().getHours();
+
+    // 'workouts' array is fetched ordered by date desc. 
+    // Check if the most recent workout is today.
+    const hasWorkoutToday = workouts.length > 0 && workouts[0].date === today;
+
+    if (!hasWorkoutToday && currentHour >= 18) {
+        recommendations.push({
+            id: 'walk_instead',
+            category: 'workout',
+            title: 'Walk Instead',
+            message: "No workout logged today. Walk 10 minutes now to maintain streak (Truth #4).",
+            priority: 'high'
+        });
+    }
+
+    return recommendations.sort((a, b) => {
+        // Force 'walk_instead' to always be top if present explanation: It is urgent.
+        if (a.id === 'walk_instead') return -1;
+        if (b.id === 'walk_instead') return 1;
+        // Prioritize high
+        if (a.priority === 'high' && b.priority !== 'high') return -1;
+        if (a.priority !== 'high' && b.priority === 'high') return 1;
+        return 0;
+    });
 };

@@ -18,9 +18,26 @@ export default function RecommendationEngine({ currentUserId }: RecommendationEn
 
         const load = async () => {
             const recs = await generateRecommendations(currentUserId);
-            // Just show top priority one for now to keep UI clean
             if (recs.length > 0) {
-                setRecommendation(recs[0]);
+                const topRec = recs[0];
+                setRecommendation(topRec);
+
+                // Auto-trigger Notification for High Priority after 6PM (Walk Instead)
+                if (topRec.id === 'walk_instead') {
+                    const today = new Date().toISOString().split('T')[0];
+                    const notifKey = `notified_walk_${currentUserId}`;
+                    const lastNotified = localStorage.getItem(notifKey);
+
+                    if (lastNotified !== today) {
+                        import('@/lib/pwaManager').then(({ pwaManager }) => {
+                            // Only send if permission likely granted or we want to request it
+                            if (Notification.permission === 'granted') {
+                                pwaManager.showLocalNotification(topRec.title, topRec.message);
+                                localStorage.setItem(notifKey, today);
+                            }
+                        });
+                    }
+                }
             }
         };
         load();
@@ -53,9 +70,29 @@ export default function RecommendationEngine({ currentUserId }: RecommendationEn
                     <h3 className="font-bold text-slate-800 dark:text-white text-lg leading-tight mb-1">
                         {recommendation.title}
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
                         {recommendation.message}
                     </p>
+
+                    {recommendation.id === 'walk_instead' && (
+                        <button
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center hover:bg-indigo-700 transition"
+                            onClick={async () => {
+                                const { saveWorkout } = await import('@/features/workouts/db');
+                                if (currentUserId) {
+                                    // Log a quick 10m walk
+                                    await saveWorkout(currentUserId, new Date(), {
+                                        evening_walk_minutes: 10,
+                                        notes: 'Emergency Walk Instead (Truth #4)',
+                                    });
+                                    // ideally trigger refresh, but for now just hide or show toast
+                                    window.location.reload();
+                                }
+                            }}
+                        >
+                            Log 10m Walk Now <ArrowRight className="ml-2 w-4 h-4" />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
