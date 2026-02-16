@@ -99,10 +99,11 @@ class SyncManager {
     }
 }
 
-export const syncManager = SyncManager.getInstance();
+// Export a getter instead of a const to avoid initialization order issues
+export const getSyncManager = () => SyncManager.getInstance();
 
 export const initSyncManager = async () => {
-    const manager = SyncManager.getInstance();
+    const manager = getSyncManager();
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {

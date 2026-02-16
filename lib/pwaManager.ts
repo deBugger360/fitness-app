@@ -46,7 +46,7 @@ class PWAManager {
 
             // Show a test notification immediately
             this.showLocalNotification(
-                "Notifications Enabled! 🚀",
+                "Notifications Enabled",
                 "You will now receive updates for your fitness goals."
             );
             return true;
@@ -61,7 +61,7 @@ class PWAManager {
             const options = {
                 body: body,
                 icon: '/icons/icon-192x192.png',
-                badge: '/icons/badge-72x72.png',
+                badge: '/icons/badge-72x72.svg',
                 vibrate: [100, 50, 100],
                 data: {
                     dateOfArrival: Date.now(),

@@ -24,7 +24,7 @@ self.addEventListener('push', function(event) {
     const options = {
         body: data.body || 'You have a new update.',
         icon: data.icon || '/icons/icon-192x192.png',
-        badge: '/icons/badge-72x72.png',
+        badge: '/icons/badge-72x72.svg',
         image: data.image, // Big picture
         vibrate: [200, 100, 200, 100, 200, 100, 200], // Custom vibration pattern
         data: {
@@ -36,12 +36,12 @@ self.addEventListener('push', function(event) {
             {
                 action: 'explore',
                 title: 'View Details',
-                icon: '/icons/checkmark.png'
+                icon: '/icons/checkmark.svg'
             },
             {
                 action: 'dismiss',
                 title: 'Dismiss',
-                icon: '/icons/xmark.png'
+                icon: '/icons/xmark.svg'
             },
         ],
         tag: 'fitness-notification', // Group notifications

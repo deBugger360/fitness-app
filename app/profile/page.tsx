@@ -7,7 +7,7 @@ import { User, RefreshCw, Target, Bell, Flame, CheckCircle2, Circle } from "luci
 import ThemeToggle from "@/features/core/components/ThemeToggle";
 import Skeleton from "@/features/core/components/Skeleton";
 import Milestones from "@/features/gamification/components/Milestones";
-import { syncManager } from "@/lib/syncManager";
+import { getSyncManager } from "@/lib/syncManager";
 import { pwaManager } from "@/lib/pwaManager";
 
 export default function ProfilePage() {
@@ -20,6 +20,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         // Subscribe to sync status
+        const syncManager = getSyncManager();
         const unsubscribe = syncManager.subscribe((status) => {
             setSyncStatus(status);
         });
