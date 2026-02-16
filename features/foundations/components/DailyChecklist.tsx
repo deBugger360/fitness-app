@@ -46,15 +46,42 @@ export default function DailyChecklist({ principles, completed, notes, onToggle,
                             </div>
                         </div>
 
-                        {/* Note Input (Collapsible or always visible if content exists) */}
-                        <div className={`mt-3 transition-all duration-300 overflow-hidden ${isCompleted || notes[principle.id] ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-                            <input
-                                type="text"
-                                value={notes[principle.id] || ''}
-                                onChange={(e) => onNoteChange(principle.id, e.target.value)}
-                                placeholder="Add a quick note..."
-                                className="w-full text-xs bg-white/50 dark:bg-black/20 border border-slate-200 dark:border-slate-700/50 rounded-lg px-3 py-2 outline-none focus:border-indigo-300 dark:focus:border-indigo-700/50 transition-colors text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-                            />
+                        {/* Note Input / Sleep Hours Input */}
+                        <div className={`mt-3 transition-all duration-300 overflow-hidden ${isCompleted || notes[principle.id] || principle.id === 'sleep_quality' ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+                            {principle.id === 'sleep_quality' ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="24"
+                                        step="0.5"
+                                        placeholder="Hours slept..."
+                                        // Extract number from "Hours: X" format
+                                        value={notes[principle.id]?.replace('Hours: ', '') || ''}
+                                        onChange={(e) => {
+                                            const hours = parseFloat(e.target.value);
+                                            // Store in specific format
+                                            onNoteChange(principle.id, `Hours: ${e.target.value}`);
+
+                                            // Auto-toggle based on 7h threshold
+                                            const shouldBeChecked = hours >= 7;
+                                            if (shouldBeChecked !== isCompleted) {
+                                                onToggle(principle.id);
+                                            }
+                                        }}
+                                        className="w-32 text-sm bg-white/50 dark:bg-black/20 border border-slate-200 dark:border-slate-700/50 rounded-lg px-3 py-2 outline-none focus:border-indigo-300 dark:focus:border-indigo-700/50 transition-colors text-slate-700 dark:text-slate-300"
+                                    />
+                                    <span className="text-xs text-slate-500">hours</span>
+                                </div>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={notes[principle.id] || ''}
+                                    onChange={(e) => onNoteChange(principle.id, e.target.value)}
+                                    placeholder="Add a quick note..."
+                                    className="w-full text-xs bg-white/50 dark:bg-black/20 border border-slate-200 dark:border-slate-700/50 rounded-lg px-3 py-2 outline-none focus:border-indigo-300 dark:focus:border-indigo-700/50 transition-colors text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                                />
+                            )}
                         </div>
                     </div>
                 );

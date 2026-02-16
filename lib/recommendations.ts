@@ -137,7 +137,38 @@ export const generateRecommendations = async (userId: string): Promise<Recommend
         });
     }
 
-    // 5. Walk Instead Engine (Truth #4)
+    const { data: foundationsData } = await supabase
+        .from('foundations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(1);
+
+    // 5. Sleep Recovery Intelligence (Truth #9)
+    if (foundationsData && foundationsData.length > 0) {
+        const flow = foundationsData[0];
+        // Notes is stored as JSONB, usually comes back as object.
+        // DailyChecklist saves it as "Hours: X"
+        const sleepNote = flow.notes && flow.notes['sleep_quality'];
+
+        if (sleepNote && typeof sleepNote === 'string') {
+            const match = sleepNote.match(/Hours: (\d+(\.\d+)?)/);
+            if (match && match[1]) {
+                const hours = parseFloat(match[1]);
+                if (hours < 6) {
+                    recommendations.push({
+                        id: 'recovery_mode',
+                        category: 'workout',
+                        title: 'Recovery Mode Activated',
+                        message: `You slept ${hours}h (< 6h). Intensity reduced to protect your CNS. Focus on movement, not PRs today.`,
+                        priority: 'high'
+                    });
+                }
+            }
+        }
+    }
+
+    // 6. Walk Instead Engine (Truth #4)
     // Check if NO workout logged today and it is getting late (e.g., after 18:00)
     const currentHour = new Date().getHours();
 
