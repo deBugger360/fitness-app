@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import AnalyticsEngine from '@/features/analytics/components/AnalyticsEngine';
+import ConsistencyScoreCard from '@/features/stats/components/ConsistencyScoreCard';
 import Skeleton from "@/features/core/components/Skeleton";
 
 export default function StatsPage() {
-    const [data, setData] = useState<{ workouts: any[], sugar: any[], meals: any[] }>({ workouts: [], sugar: [], meals: [] });
+    const [data, setData] = useState<{ workouts: any[], sugar: any[], meals: any[], foundations: any[] }>({
+        workouts: [], sugar: [], meals: [], foundations: []
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -27,7 +30,7 @@ export default function StatsPage() {
                     const endStr = endDate.toISOString().split('T')[0];
 
                     // 3. Fetch All Signals (Parallel)
-                    const [workoutsResult, sugarResult, mealsResult] = await Promise.all([
+                    const [workoutsResult, sugarResult, mealsResult, foundationsResult] = await Promise.all([
                         supabase.from('workouts')
                             .select('*')
                             .gte('date', startStr)
@@ -42,13 +45,19 @@ export default function StatsPage() {
                             .select('*')
                             .gte('date', startStr)
                             .lte('date', endStr)
+                            .eq('user_id', userId),
+                        supabase.from('foundations')
+                            .select('*')
+                            .gte('date', startStr)
+                            .lte('date', endStr)
                             .eq('user_id', userId)
                     ]);
 
                     setData({
                         workouts: workoutsResult.data || [],
                         sugar: sugarResult.data || [],
-                        meals: mealsResult.data || []
+                        meals: mealsResult.data || [],
+                        foundations: foundationsResult.data || []
                     });
                 }
             } catch (err) {
@@ -66,10 +75,9 @@ export default function StatsPage() {
             <div className="pb-24 px-6 pt-10 min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
                 <Skeleton className="h-10 w-32 mb-2" />
                 <Skeleton className="h-6 w-48 mb-8" />
-
+                <Skeleton className="h-64 w-full rounded-[24px] mb-6" />
                 <div className="space-y-6">
                     <Skeleton className="h-64 w-full rounded-[24px]" />
-                    <Skeleton className="h-48 w-full rounded-[24px]" />
                     <Skeleton className="h-48 w-full rounded-[24px]" />
                 </div>
             </div>
@@ -84,6 +92,13 @@ export default function StatsPage() {
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors duration-300">Signals matching your goals</p>
             </header>
+
+            <ConsistencyScoreCard
+                workoutData={data.workouts}
+                sugarData={data.sugar}
+                mealData={data.meals}
+                foundationData={data.foundations}
+            />
 
             <AnalyticsEngine
                 workoutData={data.workouts}
