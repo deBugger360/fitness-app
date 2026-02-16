@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Utensils, ChartBar, User, ShieldHalf, CheckSquare } from 'lucide-react';
+import { Home, Utensils, ChartBar, User, ShieldHalf, ClipboardList } from 'lucide-react';
 
 interface MobileLayoutProps {
     children: React.ReactNode;
@@ -14,7 +14,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
     const tabs = [
         { name: 'Plan', icon: Home, href: '/' },
-        { name: 'Foundations', icon: CheckSquare, href: '/foundations' },
+        { name: 'Foundations', icon: ClipboardList, href: '/foundations' },
         { name: 'Meals', icon: Utensils, href: '/meals' },
         { name: 'Sugar', icon: ShieldHalf, href: '/sugar' },
         { name: 'Stats', icon: ChartBar, href: '/stats' },
@@ -46,7 +46,10 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                                     }`}
                             >
                                 <div className={`mb-1 transition-transform duration-300 ${isActive ? 'scale-110' : 'scale-100 group-hover:scale-105'}`}>
-                                    <Icon className={`w-6 h-6 ${isActive ? 'fill-indigo-600 dark:fill-indigo-400 text-indigo-600 dark:text-indigo-400' : 'text-current'}`} strokeWidth={isActive ? 2.5 : 2} />
+                                    <Icon
+                                        className={`w-6 h-6 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-current'} ${(isActive && (tab.name === 'Plan' || tab.name === 'Sugar' || tab.name === 'Meals')) ? 'fill-indigo-600 dark:fill-indigo-400' : ''}`}
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                    />
                                 </div>
                                 <span className={`text-[10px] font-bold tracking-wide ${isActive ? 'opacity-100 font-semibold' : 'opacity-80'}`}>{tab.name}</span>
                             </Link>

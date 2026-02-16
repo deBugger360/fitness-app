@@ -41,9 +41,10 @@ export default function MealsPage() {
                 </div>
                 <button
                     onClick={() => setIsDietModalOpen(true)}
-                    className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-sm hover:shadow-md dark:shadow-none border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 transition-all hover:scale-105 active:scale-95"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg shadow-indigo-200 dark:shadow-none transition-all hover:scale-105 active:scale-95 group"
                 >
-                    <Sparkles className="w-6 h-6" />
+                    <Sparkles className="w-4 h-4 text-indigo-100 group-hover:text-white transition-colors" />
+                    <span className="font-bold text-sm">Analyze Meal</span>
                 </button>
             </header>
 

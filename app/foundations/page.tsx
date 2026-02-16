@@ -8,7 +8,7 @@ import ProgressGraph from '@/features/foundations/components/ProgressGraph';
 import TodayFocus from '@/features/foundations/components/TodayFocus';
 import { FOUNDATION_PRINCIPLES } from '@/features/foundations/constants';
 import { getFoundations, getWeeklyFoundations, saveFoundationLog } from '@/features/foundations/db';
-import { BarChart, CheckCircle2, Trophy, ArrowRight } from 'lucide-react';
+import { BarChart, CheckCircle2, Trophy, ArrowRight, Edit3 } from 'lucide-react';
 import ReflectionLogger from '@/features/reflections/components/ReflectionLogger';
 import RecentReflections from '@/features/reflections/components/RecentReflections';
 
@@ -166,11 +166,11 @@ export default function FoundationsPage() {
             <section className="mb-12">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center">
-                        <span className="mr-2">📝</span>
+                        <Edit3 className="w-4 h-4 mr-2" />
                         Reflection
                     </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                     {userId && <ReflectionLogger userId={userId} onEntrySaved={() => {
                         // Ideally trigger a refresh of the recent list
                         // For now we'll just rely on the user refreshing or navigating back
