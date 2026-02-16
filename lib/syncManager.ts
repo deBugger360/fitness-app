@@ -1,16 +1,48 @@
+"use client";
+
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
 export type SyncTable = 'workouts' | 'meals' | 'sugar_logs' | 'foundations' | 'reflections';
 
-interface SyncConfig {
-    table: SyncTable;
-    onUpdate: (payload: any) => void;
-}
-
 class SyncManager {
-    private supabase = createClient();
+    private static instance: SyncManager;
+    private supabase;
+    private listeners: ((status: 'idle' | 'syncing' | 'synced' | 'error') => void)[] = [];
+    private _status: 'idle' | 'syncing' | 'synced' | 'error' = 'idle';
     private channels: Record<string, any> = {};
+
+    private constructor() {
+        this.supabase = createClient();
+    }
+
+    public static getInstance(): SyncManager {
+        if (!SyncManager.instance) {
+            SyncManager.instance = new SyncManager();
+        }
+        return SyncManager.instance;
+    }
+
+    public subscribe(listener: (status: 'idle' | 'syncing' | 'synced' | 'error') => void) {
+        this.listeners.push(listener);
+        listener(this._status); // Emit current status immediately
+
+        return () => {
+            this.listeners = this.listeners.filter(l => l !== listener);
+        };
+    }
+
+    private setStatus(status: 'idle' | 'syncing' | 'synced' | 'error') {
+        this._status = status;
+        this.listeners.forEach(l => l(status));
+
+        if (status === 'syncing') {
+            // Revert to synced after a delay for UX
+            setTimeout(() => {
+                this.setStatus('synced');
+            }, 2000);
+        }
+    }
 
     public init(userId: string) {
         if (!userId) return;
@@ -34,10 +66,10 @@ class SyncManager {
                 schema: 'public',
                 table: table,
                 filter: `user_id=eq.${userId}`
-            }, (payload) => {
+            }, (payload: any) => {
                 this.handleRealtimeUpdate(table, payload);
             })
-            .subscribe((status) => {
+            .subscribe((status: any) => {
                 if (status === 'SUBSCRIBED') {
                     console.log(`Subscribed to realtime updates for ${table}`);
                 }
@@ -46,15 +78,15 @@ class SyncManager {
 
     private handleRealtimeUpdate(table: SyncTable, payload: any) {
         console.log(`Realtime update received for ${table}:`, payload);
+        this.setStatus('syncing');
 
         // Notify user of remote change
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            // We could trigger a global state update here (e.g., via Context or Recoil/Zustand)
-            // For now, we'll show a toast to indicate data is staying in sync
-            // NOTE: In a real app, you'd want to silence self-updates to avoid double-toasting
-            // But since this catches *remote* updates (e.g. phone updating tablet), it's useful.
-
-            // Debounce or filter could be added here
+            const tableName = table.replace('_', ' ');
+            toast({
+                title: "Data Synced",
+                description: `New ${tableName.slice(0, -1)} data received from cloud.`,
+            });
         }
     }
 
@@ -63,15 +95,17 @@ class SyncManager {
             this.supabase.removeChannel(channel);
         });
         this.channels = {};
+        this.listeners = [];
     }
 }
 
-export const syncManager = new SyncManager();
+export const syncManager = SyncManager.getInstance();
 
 export const initSyncManager = async () => {
+    const manager = SyncManager.getInstance();
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-        syncManager.init(user.id);
+        manager.init(user.id);
     }
 };

@@ -7,16 +7,23 @@ import { User, RefreshCw, Target, Bell, Flame, CheckCircle2, Circle } from "luci
 import ThemeToggle from "@/features/core/components/ThemeToggle";
 import Skeleton from "@/features/core/components/Skeleton";
 import Milestones from "@/features/gamification/components/Milestones";
+import { syncManager } from "@/lib/syncManager";
+import { pwaManager } from "@/lib/pwaManager";
 
 export default function ProfilePage() {
     const [user, setUser] = useState<any>(null);
-    const [pendingSyncs, setPendingSyncs] = useState(0);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
     const [loading, setLoading] = useState(true);
     const [weeklyHistory, setWeeklyHistory] = useState<any[]>([]);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [currentStreak, setCurrentStreak] = useState(0);
 
     useEffect(() => {
+        // Subscribe to sync status
+        const unsubscribe = syncManager.subscribe((status) => {
+            setSyncStatus(status);
+        });
+
         const fetchProfile = async () => {
             const supabase = createClient();
 
@@ -33,72 +40,75 @@ export default function ProfilePage() {
 
                 if (profile) {
                     setUser(profile);
-                    // Load notification pref from local storage or default
-                    const notifPref = localStorage.getItem('notifications_enabled') === 'true';
-                    setNotificationsEnabled(notifPref);
-
-                    // Fetch Weekly History (Last 7 Days)
-                    const today = new Date();
-                    const last7Days = [];
-                    for (let i = 6; i >= 0; i--) {
-                        const d = new Date();
-                        d.setDate(today.getDate() - i);
-                        last7Days.push(d.toISOString().split('T')[0]);
-                    }
-
-                    // Query Workouts
-                    const startDate = last7Days[0];
-                    const endDate = last7Days[last7Days.length - 1];
-
-                    const { data: historyData } = await supabase
-                        .from('workouts')
-                        .select('*')
-                        .gte('date', startDate)
-                        .lte('date', endDate)
-                        .eq('user_id', authUser.id);
-
-                    const history = historyData || [];
-
-                    // Map history to days
-                    const weekData = last7Days.map(date => {
-                        const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
-                        const found = history.find((h: any) => h.date === date);
-                        return { date, day: dayName, completed: !!found };
+                } else {
+                    // Fallback if profile row missing but auth exists
+                    setUser({
+                        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || "User",
+                        email: authUser.email,
+                        id: authUser.id
                     });
-                    setWeeklyHistory(weekData);
-
-                    // Calculate Streak (Simple version: count workouts in last X days?)
-                    // For now, let's just count total workouts as a proxy or fetch streak specific logic
-                    const currentStreak = history.length;
-                    setCurrentStreak(currentStreak);
                 }
+
+                // Load notification pref from local storage or default
+                const notifPref = localStorage.getItem('notifications_enabled') === 'true';
+                setNotificationsEnabled(notifPref);
+
+                // Fetch Weekly History (Last 7 Days)
+                const today = new Date();
+                const last7Days = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(today.getDate() - i);
+                    last7Days.push(d.toISOString().split('T')[0]);
+                }
+
+                // Query Workouts
+                const startDate = last7Days[0];
+                const endDate = last7Days[last7Days.length - 1];
+
+                const { data: historyData } = await supabase
+                    .from('workouts')
+                    .select('*')
+                    .gte('date', startDate)
+                    .lte('date', endDate)
+                    .eq('user_id', authUser.id);
+
+                const history = historyData || [];
+
+                // Map history to days
+                const weekData = last7Days.map(date => {
+                    const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'short' });
+                    const found = history.find((h: any) => h.date === date);
+                    return { date, day: dayName, completed: !!found };
+                });
+                setWeeklyHistory(weekData);
+
+                const currentStreak = history.length;
+                setCurrentStreak(currentStreak);
             }
-
-            // Sync Status - In Supabase, we assume synced unless we implement offline queue
-            setPendingSyncs(0);
-
             setLoading(false);
-        }
+        };
 
         fetchProfile();
+        return () => unsubscribe();
     }, []);
 
-    const toggleNotifications = () => {
+    // ... existing toggleNotifications ...
+
+    // ... render logic ... 
+    // ... existing toggleNotifications ...
+
+    const toggleNotifications = async () => {
         const newState = !notificationsEnabled;
         setNotificationsEnabled(newState);
         localStorage.setItem('notifications_enabled', String(newState));
 
         if (newState) {
-            // Request permission
-            if ('Notification' in window) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        new Notification('Reminders Enabled', {
-                            body: 'We\'ll help you stay on track! 🚀',
-                            icon: '/icons/icon-192x192.png'
-                        });
-                    }
-                });
+            const granted = await pwaManager.requestNotificationPermission();
+            if (!granted) {
+                // Revert if denied
+                setNotificationsEnabled(false);
+                localStorage.setItem('notifications_enabled', 'false');
             }
         }
     };
@@ -223,25 +233,27 @@ export default function ProfilePage() {
 
             {/* Sync Status Section */}
             <section className="bg-white dark:bg-slate-900 rounded-[24px] p-6 border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors duration-300">
-                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-12 -mt-12 opacity-50 ${pendingSyncs > 0 ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}></div>
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl -mr-12 -mt-12 opacity-50 ${syncStatus === 'syncing' ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}></div>
 
                 <div className="flex items-center justify-between mb-3 relative z-10">
                     <div className="flex items-center">
-                        <div className={`p-2 rounded-lg mr-3 ${pendingSyncs > 0 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'}`}>
-                            <RefreshCw className={`w-5 h-5 ${pendingSyncs > 0 ? 'animate-spin' : ''}`} />
+                        <div className={`p-2 rounded-lg mr-3 ${syncStatus === 'syncing' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'}`}>
+                            <RefreshCw className={`w-5 h-5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-900 dark:text-white transition-colors duration-300">Cloud Sync</h3>
                             <p className="text-xs text-slate-400 font-medium mt-0.5">
-                                {pendingSyncs > 0 ? 'Syncing...' : 'Last synced just now'}
+                                {syncStatus === 'syncing' ? 'Syncing changes...' :
+                                    syncStatus === 'error' ? 'Sync error' :
+                                        'Real-time connection active'}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className={`mt-2 p-3 rounded-xl text-xs font-medium flex items-center justify-between transition-colors duration-300 ${pendingSyncs > 0 ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300' : 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300'}`}>
-                    <span>{pendingSyncs > 0 ? `${pendingSyncs} items pending` : 'All systems operational'}</span>
-                    {pendingSyncs === 0 && <span className="text-lg">✨</span>}
+                <div className={`mt-2 p-3 rounded-xl text-xs font-medium flex items-center justify-between transition-colors duration-300 ${syncStatus === 'syncing' ? 'bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300' : 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300'}`}>
+                    <span>{syncStatus === 'syncing' ? 'Updating data...' : 'All systems operational'}</span>
+                    {syncStatus === 'synced' && <span className="text-lg">✨</span>}
                 </div>
             </section>
 
