@@ -24,6 +24,8 @@ export const getWeeklyFoundations = async (userId: string, startDate: string, en
     return data || [];
 };
 
+import { normalizeFoundationLog } from "@/lib/analyticsService";
+
 export const saveFoundationLog = async (userId: string, date: string, completed: string[], notes: Record<string, string>) => {
     const supabase = createClient();
     const score = completed.length;
@@ -36,14 +38,20 @@ export const saveFoundationLog = async (userId: string, date: string, completed:
         .eq('date', date)
         .single();
 
+    let result;
     if (existing) {
-        return await supabase
+        result = await supabase
             .from('foundations')
             .update({ completed_principles: completed, notes, score })
             .eq('id', existing.id);
     } else {
-        return await supabase
+        result = await supabase
             .from('foundations')
             .insert({ user_id: userId, date, completed_principles: completed, notes, score });
     }
+
+    // Dispatch Normalized Analytics Event (Fire and forget)
+    normalizeFoundationLog(userId, completed, score);
+
+    return result;
 };

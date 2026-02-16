@@ -67,6 +67,8 @@ export const analyzeReflection = (text: string): { quality: 'positive' | 'neutra
     return { quality, tags, suggestions, score };
 };
 
+import { logAnalyticsEvent } from "@/lib/analyticsService";
+
 export const saveReflection = async (userId: string, content: string) => {
     const supabase = createClient();
     const analysis = analyzeReflection(content);
@@ -86,6 +88,20 @@ export const saveReflection = async (userId: string, content: string) => {
         .single();
 
     if (error) throw error;
+
+    // Log Normalized Event for ML
+    logAnalyticsEvent({
+        userId,
+        category: 'reflection',
+        action: 'log_reflection',
+        value: analysis.score,
+        tags: [analysis.quality, ...analysis.tags],
+        context: {
+            sentiment_quality: analysis.quality,
+            has_suggestions: analysis.suggestions.length > 0
+        }
+    });
+
     return data;
 };
 

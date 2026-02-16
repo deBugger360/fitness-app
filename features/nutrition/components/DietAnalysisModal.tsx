@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { X, Sparkles, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { normalizeMealLog } from "@/lib/analyticsService";
 
 interface DietAnalysisModalProps {
     currentUserId: string | null;
@@ -125,6 +126,10 @@ export default function DietAnalysisModal({ currentUserId, isOpen, onClose }: Di
                     quality: result.quality,
                     synced: 0
                 });
+
+                // Log Normalized Event for ML
+                normalizeMealLog(currentUserId, description, result.quality);
+
             } catch (e) {
                 console.error("Error logging reflection", e);
             }
