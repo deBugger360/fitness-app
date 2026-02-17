@@ -48,15 +48,15 @@ export default function NotificationManager() {
 
         const workout = await db.table('workouts')
             .where('date').equals(today)
-            .and(w => w.user_id === user.id)
+            .and((w: any) => w.user_id === user.id)
             .first();
 
         // If not done (or not even created), send reminder
         // For 'evening_walk_minutes', check if > 0
         let isDone = false;
         if (workout) {
-            if (field === 'morning_hiit_completed') isDone = workout.morning_hiit_completed === 1;
-            if (field === 'evening_walk_minutes') isDone = workout.evening_walk_minutes > 0;
+            if (field === 'morning_hiit_completed') isDone = (workout as any).morning_hiit_completed === 1;
+            if (field === 'evening_walk_minutes') isDone = (workout as any).evening_walk_minutes > 0;
         }
 
         if (!isDone) {
@@ -71,11 +71,11 @@ export default function NotificationManager() {
 
         const log = await db.table('meals')
             .where('date').equals(today)
-            .and(m => m.user_id === user.id)
+            .and((m: any) => m.user_id === user.id)
             .first();
 
         // If no log or specific meal slot empty
-        if (!log || !log[mealType] || log[mealType].length < 2) {
+        if (!log || !(log as any)[mealType] || (log as any)[mealType].length < 2) {
             sendNotification(title, body);
         }
     };

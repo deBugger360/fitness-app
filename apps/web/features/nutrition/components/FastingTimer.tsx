@@ -4,7 +4,11 @@ import React, { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
-const FastingTimer: React.FC = () => {
+interface FastingTimerProps {
+    window?: string;
+}
+
+const FastingTimer: React.FC<FastingTimerProps> = ({ window = "16:8" }) => {
     const [status, setStatus] = useState<"waiting" | "eating" | "closed">("waiting");
     const [timeLeft, setTimeLeft] = useState("");
     const [progress, setProgress] = useState(0);
@@ -72,9 +76,14 @@ const FastingTimer: React.FC = () => {
                     <Clock className={`w-5 h-5 ${getStatusColor()}`} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-400 uppercase tracking-wide transition-colors duration-300">
-                        {status === "eating" ? "Eating Window" : "Fasting Status"}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-400 uppercase tracking-wide transition-colors duration-300">
+                            {status === "eating" ? "Eating Window" : "Fasting Status"}
+                        </h3>
+                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 font-mono">
+                            {window}
+                        </span>
+                    </div>
                     <motion.p
                         key={timeLeft}
                         initial={{ opacity: 0, y: 5 }}
