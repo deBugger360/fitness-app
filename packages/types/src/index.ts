@@ -40,8 +40,10 @@ export interface SugarLog {
     amount_grams?: number;
     activity_context?: string; // what were they doing?
     mood_context?: string; // how did they feel?
+    trigger?: string; // e.g., "Stress", "Boredom"
+    severity?: number; // 1-10 intensity
     success_resisted: boolean; // TRUE if they didn't eat it
-    created_at?: string;
+    created_at?: string; // Essential for time-of-day analytics
 }
 
 export interface DailyScore {
