@@ -1,3 +1,6 @@
+export * from '@repo/types';
+
+// Keep legacy types if distinct, but favor @repo/types
 export interface Recommendation {
     id: string;
     category: 'workout' | 'nutrition' | 'hydration' | 'habit';
@@ -6,51 +9,10 @@ export interface Recommendation {
     priority: 'high' | 'medium' | 'low';
 }
 
-export interface Workout {
-    id?: string;
-    user_id?: string;
-    date: string;
-    morning_hiit_completed?: boolean;
-    // Add other fields as discovered from codebase
-    [key: string]: any;
-}
-
-export interface Meal {
-    id?: string;
-    user_id?: string;
-    date: string;
-    green_tea_cups?: number;
-    lunch?: any;
-    dinner?: any;
-    [key: string]: any;
-}
-
-export interface SugarLog {
-    id?: string;
-    user_id?: string;
-    date: string;
-    type: 'intake' | 'craving';
-    success_resisted?: boolean;
-    [key: string]: any;
-}
-
 export interface Foundation {
     id?: string;
     user_id?: string;
     date: string;
     notes?: Record<string, any> | null;
-    [key: string]: any;
-}
-
-export interface BehaviorLog {
-    id?: string;
-    user_id?: string;
-    date: string;
-    foods: string;
-    mood: string;
-    calorie_density: string;
-    tags: string[];
-    suggestions: string;
-    created_at?: string;
     [key: string]: any;
 }

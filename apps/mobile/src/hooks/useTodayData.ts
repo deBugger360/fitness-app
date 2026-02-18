@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
-import { BehaviorLog, Workout, Meal, SugarLog } from '@repo/shared/src/types';
+import { BehaviorLog, WorkoutLog, MealLog, SugarLog } from '@repo/types';
 
 export function useTodayData(userId?: string) {
     const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export function useTodayData(userId?: string) {
             let dailyScore = 0;
             const workoutCount = workouts.data?.length || 0;
             const mealCount = meals.data?.length || 0;
-            const waterCount = meals.data?.reduce((acc, curr) => acc + (curr.green_tea_cups || 0), 0) || 0; // Using green tea as proxy for water/hydration if separate table doesn't exist
+            const waterCount = meals.data?.reduce((acc: number, curr: any) => acc + (curr.green_tea_cups || 0), 0) || 0;
             const cravingCount = cravings.data?.length || 0;
             const logCount = behavior.data?.length || 0;
 

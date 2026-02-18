@@ -3,8 +3,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'react-native';
 
-import HomeScreen from '../screens/HomeScreen';
-import { ActivityScreen, MealsScreen, SugarScreen, InsightsScreen, ProfileScreen } from '../screens/PlaceholderScreens';
+import TodayScreen from '../screens/TodayScreen';
+import ActivityScreen from '../screens/ActivityScreen';
+import MealsScreen from '../screens/MealsScreen';
+import SugarScreen from '../screens/SugarScreen';
+import InsightsScreen from '../screens/InsightsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -57,7 +61,7 @@ export default function TabNavigator() {
                 },
             })}
         >
-            <Tab.Screen name="Today" component={HomeScreen} />
+            <Tab.Screen name="Today" component={TodayScreen} />
             <Tab.Screen name="Activity" component={ActivityScreen} />
             <Tab.Screen name="Meals" component={MealsScreen} />
             <Tab.Screen name="Sugar" component={SugarScreen} />
