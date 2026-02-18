@@ -1,12 +1,36 @@
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
+import { NotificationService } from '../services/NotificationService';
 
 export default function ProfileScreen() {
     const { user, signOut } = useAuth();
+
+    const [prefs, setPrefs] = useState({
+        workout: true,
+        craving: true,
+        walk: true,
+        streak: true
+    });
+
+    useEffect(() => {
+        const init = async () => {
+            const granted = await NotificationService.registerForPushNotificationsAsync();
+            if (granted) {
+                NotificationService.setupDefaultNotifications(prefs);
+            }
+        };
+        init();
+    }, []);
+
+    const toggleNotification = (key: keyof typeof prefs) => {
+        const newPrefs = { ...prefs, [key]: !prefs[key] };
+        setPrefs(newPrefs);
+        NotificationService.setupDefaultNotifications(newPrefs);
+    };
 
     // Mock user data if profile not fully set
     const userName = user?.email?.split('@')[0] || "User";
@@ -30,6 +54,18 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={16} color="#cbd5e1" />
         </TouchableOpacity>
+    );
+
+    const NotificationToggle = ({ label, value, onToggle }: any) => (
+        <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>{label}</Text>
+            <Switch
+                trackColor={{ false: "#e2e8f0", true: "#818CF8" }}
+                thumbColor={value ? "#4F46E5" : "#f4f3f4"}
+                onValueChange={onToggle}
+                value={value}
+            />
+        </View>
     );
 
     return (
@@ -66,12 +102,31 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Settings Section */}
-                <Text style={styles.sectionTitle}>Preferences</Text>
+                <Text style={styles.sectionTitle}>Smart alerts</Text>
                 <View style={styles.settingsCard}>
-                    <SettingItem icon="notifications-outline" label="Notifications" onPress={() => { }} />
-                    <SettingItem icon="moon-outline" label="Dark Mode" onPress={() => { }} />
-                    <SettingItem icon="lock-closed-outline" label="Privacy & Security" onPress={() => { }} />
+                    <NotificationToggle
+                        label="Morning Workout (5 AM)"
+                        value={prefs.workout}
+                        onToggle={() => toggleNotification('workout')}
+                    />
+                    <View style={styles.divider} />
+                    <NotificationToggle
+                        label="Craving Watch (2 PM)"
+                        value={prefs.craving}
+                        onToggle={() => toggleNotification('craving')}
+                    />
+                    <View style={styles.divider} />
+                    <NotificationToggle
+                        label="Evening Walk (6 PM)"
+                        value={prefs.walk}
+                        onToggle={() => toggleNotification('walk')}
+                    />
+                    <View style={styles.divider} />
+                    <NotificationToggle
+                        label="Streak Rescue"
+                        value={prefs.streak}
+                        onToggle={() => toggleNotification('streak')}
+                    />
                 </View>
 
                 <Text style={styles.sectionTitle}>Account</Text>
@@ -224,6 +279,23 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#334155',
         fontWeight: '500',
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    toggleLabel: {
+        fontSize: 15,
+        color: '#334155',
+        fontWeight: '500',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#f1f5f9',
+        marginHorizontal: 16,
     },
     version: {
         textAlign: 'center',
