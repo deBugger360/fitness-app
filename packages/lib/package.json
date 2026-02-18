@@ -8,12 +8,13 @@
         "lint": "eslint \"**/*.ts*\""
     },
     "dependencies": {
-        "@supabase/supabase-js": "^2.39.0",
-        "@supabase/ssr": "^0.1.0"
+        "@repo/types": "^1.0.0",
+        "@supabase/ssr": "^0.1.0",
+        "@supabase/supabase-js": "^2.39.0"
     },
     "devDependencies": {
-        "typescript": "^5.0.0",
-        "eslint": "^8.0.0"
+        "eslint": "^8.0.0",
+        "typescript": "^5.0.0"
     },
     "keywords": [],
     "author": "",

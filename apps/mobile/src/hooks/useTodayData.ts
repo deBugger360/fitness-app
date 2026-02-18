@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
-import { BehaviorLog, WorkoutLog, MealLog, SugarLog } from '@repo/types';
+import { BehaviorLog, WorkoutLog, MealLog, SugarLog, Foundation } from '@repo/types';
+
+import { calculateDailyScore } from '@repo/lib';
 
 export function useTodayData(userId?: string) {
     const [loading, setLoading] = useState(true);
@@ -22,30 +24,31 @@ export function useTodayData(userId?: string) {
 
         try {
             // Parallel Fetches
-            const [workouts, meals, cravings, behavior] = await Promise.all([
-                supabase.from('workouts').select('id, morning_hiit_completed').eq('user_id', userId).eq('date', today),
-                supabase.from('meals').select('id, green_tea_cups').eq('user_id', userId).eq('date', today), // Assuming water stored here or similar
-                supabase.from('sugar_logs').select('id').eq('user_id', userId).eq('date', today).eq('type', 'craving'),
+            const [workouts, meals, sugarLogs, behavior, foundations] = await Promise.all([
+                supabase.from('workouts').select('*').eq('user_id', userId).eq('date', today),
+                supabase.from('meals').select('*').eq('user_id', userId).eq('date', today),
+                supabase.from('sugar_logs').select('*').eq('user_id', userId).eq('date', today), // Fetch ALL sugar logs (intake + craving)
                 supabase.from('reality_logs').select('id').eq('user_id', userId).gte('created_at', today),
+                supabase.from('foundations').select('*').eq('user_id', userId).eq('date', today).maybeSingle()
             ]);
 
-            // Calculate "Consistency Score" (Primitive implementation)
-            let dailyScore = 0;
-            const workoutCount = workouts.data?.length || 0;
-            const mealCount = meals.data?.length || 0;
-            const waterCount = meals.data?.reduce((acc: number, curr: any) => acc + (curr.green_tea_cups || 0), 0) || 0;
-            const cravingCount = cravings.data?.length || 0;
-            const logCount = behavior.data?.length || 0;
+            // Transform data for Analytics Engine
+            const workoutData: WorkoutLog[] = workouts.data || [];
+            const mealData: MealLog[] = meals.data || [];
+            const sugarData: SugarLog[] = sugarLogs.data || [];
+            const foundationData: Foundation | null = foundations.data || null;
 
-            if (workoutCount > 0) dailyScore += 30;
-            if (mealCount > 0) dailyScore += 20;
-            if (waterCount >= 4) dailyScore += 20; // 4 cups target
-            if (logCount > 0) dailyScore += 30;
+            // Calculate Scientific Score
+            const dailyScore = calculateDailyScore(workoutData, mealData, sugarData, foundationData);
+            setScore(dailyScore.score);
 
-            setScore(Math.min(dailyScore, 100));
+            // Stats for UI
+            const waterCount = mealData.reduce((acc, curr) => acc + (curr.green_tea_cups || 0), 0);
+            const cravingCount = sugarData.filter(s => s.type === 'craving').length;
+
             setStats({
-                workouts: workoutCount,
-                meals: mealCount,
+                workouts: workoutData.length,
+                meals: mealData.length,
                 water: waterCount,
                 cravings: cravingCount
             });
