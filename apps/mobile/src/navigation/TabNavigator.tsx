@@ -1,7 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
+
+import { useTheme } from '@repo/ui';
 
 import TodayScreen from '../screens/TodayScreen';
 import ActivityScreen from '../screens/ActivityScreen';
@@ -13,20 +14,17 @@ import ProfileScreen from '../screens/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
-
-    const activeColor = isDark ? '#818CF8' : '#4F46E5'; // Indigo-400 : Indigo-600
+    const { theme } = useTheme();
 
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarActiveTintColor: activeColor,
-                tabBarInactiveTintColor: isDark ? '#94a3b8' : '#64748b', // Slate-400 : Slate-500
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.textSecondary,
                 tabBarStyle: {
-                    backgroundColor: isDark ? '#020617' : '#ffffff', // Slate-950 : White
-                    borderTopColor: isDark ? '#1e293b' : '#f1f5f9',
+                    backgroundColor: theme.colors.tabBar,
+                    borderTopColor: theme.colors.border,
                 },
                 tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
                     let iconName: keyof typeof Ionicons.glyphMap = 'ellipse';

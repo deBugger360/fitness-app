@@ -3,15 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
-import { MealLog } from '@repo/types';
+import { useTheme } from '@repo/ui';
 
 export default function MealsScreen() {
     const { user } = useAuth();
+    const { theme } = useTheme();
     const [log, setLog] = useState('');
     const [quality, setQuality] = useState<'healthy' | 'moderate' | 'unhealthy'>('moderate');
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
 
+    const styles = getStyles(theme);
     const today = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
@@ -40,7 +42,7 @@ export default function MealsScreen() {
                 date: today,
                 quality,
                 description: log,
-                green_tea_cups: 0 // Placeholder or separate input
+                green_tea_cups: 0 // Placeholder
             });
 
             if (error) throw error;
@@ -70,6 +72,7 @@ export default function MealsScreen() {
                     <TextInput
                         style={styles.input}
                         placeholder="e.g. Grilled Chicken Salad..."
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={log}
                         onChangeText={setLog}
                         multiline
@@ -121,7 +124,7 @@ export default function MealsScreen() {
                 {history.map((item, index) => (
                     <View key={item.id || index} style={styles.historyItem}>
                         <View style={[styles.dot, {
-                            backgroundColor: item.quality === 'healthy' ? '#10B981' : item.quality === 'moderate' ? '#F59E0B' : '#EF4444'
+                            backgroundColor: item.quality === 'healthy' ? theme.colors.success : item.quality === 'moderate' ? theme.colors.warning : theme.colors.error
                         }]} />
                         <Text style={styles.historyText}>{item.description}</Text>
                         <Text style={styles.historyTime}>
@@ -135,10 +138,10 @@ export default function MealsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: theme.colors.background,
         paddingTop: 60,
     },
     header: {
@@ -148,11 +151,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#0f172a',
+        color: theme.colors.text,
     },
     date: {
         fontSize: 16,
-        color: '#64748b',
+        color: theme.colors.textSecondary,
         fontWeight: '500',
     },
     scrollContent: {
@@ -160,7 +163,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     inputCard: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.card,
         borderRadius: 24,
         padding: 20,
         marginBottom: 32,
@@ -169,23 +172,27 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 12,
         elevation: 2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#64748b',
+        color: theme.colors.textSecondary,
         marginBottom: 12,
         marginTop: 4,
     },
     input: {
-        backgroundColor: '#f1f5f9',
+        backgroundColor: theme.colors.background,
         borderRadius: 16,
         padding: 16,
         fontSize: 16,
-        color: '#0f172a',
+        color: theme.colors.text,
         minHeight: 80,
         textAlignVertical: 'top',
         marginBottom: 20,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     qualityRow: {
         flexDirection: 'row',
@@ -197,22 +204,26 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 10,
         borderRadius: 12,
-        backgroundColor: '#f1f5f9',
+        backgroundColor: theme.colors.background,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
-    qualityBtn_healthy: { backgroundColor: '#10B981', },
-    qualityBtn_moderate: { backgroundColor: '#F59E0B', },
-    qualityBtn_unhealthy: { backgroundColor: '#EF4444', },
+    qualityBtn_healthy: { backgroundColor: theme.colors.success, borderColor: theme.colors.success },
+    qualityBtn_moderate: { backgroundColor: theme.colors.warning, borderColor: theme.colors.warning },
+    qualityBtn_unhealthy: { backgroundColor: theme.colors.error, borderColor: theme.colors.error },
     qualityText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#64748b',
+        color: theme.colors.textSecondary,
     },
     qualityTextActive: {
         color: '#fff',
     },
     submitBtn: {
-        backgroundColor: '#0f172a', // Slate-900
+        backgroundColor: theme.colors.text, // Invert (dark bg on light mode, light bg on dark mode)? No, usually Primary or solid dark.
+        // Let's use Primary for consistency or Text (black/white)
+        // If we use 'text', in dark mode it's white (good), in light mode it's black (good).
         paddingVertical: 16,
         borderRadius: 16,
         flexDirection: 'row',
@@ -224,20 +235,20 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     submitText: {
-        color: '#fff',
+        color: theme.colors.background, // Text on submit button should contrast
         fontWeight: '700',
         fontSize: 16,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#0f172a',
+        color: theme.colors.text,
         marginBottom: 16,
     },
     historyItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.card,
         padding: 16,
         borderRadius: 16,
         marginBottom: 12,
@@ -245,6 +256,8 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.03,
         shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     dot: {
         width: 10,
@@ -255,11 +268,11 @@ const styles = StyleSheet.create({
     historyText: {
         flex: 1,
         fontSize: 15,
-        color: '#334155',
+        color: theme.colors.text,
         fontWeight: '500',
     },
     historyTime: {
         fontSize: 12,
-        color: '#94a3b8',
+        color: theme.colors.textSecondary,
     },
 });

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
-import { Foundation } from '@repo/types';
+import { useTheme } from '@repo/ui';
 
 // Default Foundational Habits
 const DEFAULT_HABITS = [
@@ -17,6 +17,7 @@ const DEFAULT_HABITS = [
 
 export default function ActivityScreen() {
     const { user } = useAuth();
+    const { theme } = useTheme();
     const [habits, setHabits] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
 
@@ -75,6 +76,8 @@ export default function ActivityScreen() {
         }
     };
 
+    const styles = getStyles(theme);
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -97,7 +100,7 @@ export default function ActivityScreen() {
                                     <Ionicons
                                         name={habit.icon as any}
                                         size={22}
-                                        color={habits[habit.id] ? '#fff' : '#64748b'}
+                                        color={habits[habit.id] ? '#fff' : theme.colors.textSecondary}
                                     />
                                 </View>
                                 <Text style={[styles.habitLabel, habits[habit.id] && styles.habitLabelActive]}>
@@ -116,10 +119,10 @@ export default function ActivityScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: theme.colors.background,
         paddingTop: 60,
     },
     header: {
@@ -129,12 +132,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#0f172a',
+        color: theme.colors.text,
         marginBottom: 4,
     },
     date: {
         fontSize: 14,
-        color: '#64748b',
+        color: theme.colors.textSecondary,
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -144,7 +147,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.card,
         borderRadius: 24,
         padding: 8,
         shadowColor: '#000',
@@ -152,11 +155,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 12,
         elevation: 2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     cardTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#334155',
+        color: theme.colors.textSecondary,
         margin: 16,
         marginBottom: 8,
     },
@@ -168,7 +173,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         marginVertical: 4,
         borderRadius: 16,
-        backgroundColor: '#fff', // Default background
     },
     habitInfo: {
         flexDirection: 'row',
@@ -178,21 +182,24 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: '#f1f5f9',
+        backgroundColor: theme.colors.background,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     iconBoxActive: {
-        backgroundColor: '#4F46E5', // Indigo-600
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
     },
     habitLabel: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#334155',
+        color: theme.colors.textSecondary,
     },
     habitLabelActive: {
-        color: '#0f172a',
+        color: theme.colors.text,
         fontWeight: '600',
     },
     checkbox: {
@@ -200,12 +207,12 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 8,
         borderWidth: 2,
-        borderColor: '#cbd5e1',
+        borderColor: theme.colors.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     checkboxActive: {
-        backgroundColor: '#10B981', // Emerald-500
-        borderColor: '#10B981',
+        backgroundColor: theme.colors.success,
+        borderColor: theme.colors.success,
     },
 });

@@ -1,9 +1,10 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LineChart, BarChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '@repo/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -13,7 +14,6 @@ const MOCK_DATA = {
     datasets: [
         {
             data: [85, 90, 60, 95, 100, 80, 92],
-            color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`, // Indigo
             strokeWidth: 2
         }
     ],
@@ -22,6 +22,8 @@ const MOCK_DATA = {
 
 export default function InsightsScreen() {
     const { user } = useAuth();
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     // In a real app, fetch 7-day history here
     useFocusEffect(
@@ -40,23 +42,26 @@ export default function InsightsScreen() {
             <View style={styles.chartCard}>
                 <Text style={styles.chartTitle}>Consistency Trend</Text>
                 <LineChart
-                    data={MOCK_DATA}
+                    data={{
+                        ...MOCK_DATA,
+                        datasets: [{ ...MOCK_DATA.datasets[0], color: (opacity = 1) => theme.colors.primary }]
+                    }}
                     width={width - 48}
                     height={220}
                     chartConfig={{
-                        backgroundColor: "#fff",
-                        backgroundGradientFrom: "#fff",
-                        backgroundGradientTo: "#fff",
+                        backgroundColor: theme.colors.card,
+                        backgroundGradientFrom: theme.colors.card,
+                        backgroundGradientTo: theme.colors.card,
                         decimalPlaces: 0,
-                        color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+                        color: (opacity = 1) => theme.colors.primary,
+                        labelColor: (opacity = 1) => theme.colors.textSecondary,
                         style: {
                             borderRadius: 16
                         },
                         propsForDots: {
                             r: "5",
                             strokeWidth: "2",
-                            stroke: "#4F46E5"
+                            stroke: theme.colors.primary
                         }
                     }}
                     bezier
@@ -75,10 +80,10 @@ export default function InsightsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: theme.colors.background,
         paddingTop: 60,
         paddingHorizontal: 24,
     },
@@ -88,15 +93,15 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#0f172a',
+        color: theme.colors.text,
     },
     subtitle: {
         fontSize: 16,
-        color: '#64748b',
+        color: theme.colors.textSecondary,
         fontWeight: '500',
     },
     chartCard: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.card,
         borderRadius: 24,
         padding: 16,
         alignItems: 'center',
@@ -105,17 +110,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 12,
         elevation: 2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     chartTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#334155',
+        color: theme.colors.text,
         marginBottom: 12,
         alignSelf: 'flex-start',
         paddingLeft: 8,
     },
     comingSoon: {
-        color: '#94a3b8',
+        color: theme.colors.textSecondary,
         padding: 20,
         textAlign: 'center',
     }
