@@ -124,3 +124,4 @@ dist
 # Expo
 .expo
 web-build
+MIGRATION_PLAN.md

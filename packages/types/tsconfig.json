@@ -1,8 +1,14 @@
 {
-    "extends": "@repo/typescript-config/base.json",
     "compilerOptions": {
+        "target": "es2019",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
         "outDir": "dist",
-        "rootDir": "src"
+        "rootDir": "src",
+        "declaration": true
     },
     "include": [
         "src"

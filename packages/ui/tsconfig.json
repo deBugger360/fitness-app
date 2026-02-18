@@ -1,10 +1,16 @@
 {
-    "extends": "@repo/typescript-config/react-library.json",
     "compilerOptions": {
+        "target": "es2019",
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "jsx": "react-native",
         "outDir": "dist",
         "rootDir": "src",
         "baseUrl": ".",
-        "jsx": "react-native"
+        "declaration": true
     },
     "include": [
         "src"

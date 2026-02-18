@@ -1,0 +1,93 @@
+{
+  "profile": {
+    "age": 28,
+    "height_cm": 175,
+    "weight_range_kg": [
+      120,
+      130
+    ],
+    "goals": [
+      "fat_loss",
+      "belly_fat",
+      "stamina",
+      "strength"
+    ],
+    "fasting_window": "12:00-18:00",
+    "water_liters_per_day": 3,
+    "green_tea_cups": 2,
+    "training_days_per_week": 5
+  },
+  "weekly_schedule": {
+    "monday": "HIIT_A + walk",
+    "tuesday": "HIIT_B + walk",
+    "wednesday": "HIIT_A + walk",
+    "thursday": "HIIT_B + walk",
+    "friday": "HIIT_C + walk",
+    "saturday": "rest",
+    "sunday": "rest"
+  },
+  "workouts": {
+    "HIIT_A": [
+      "knee_pushups",
+      "squats",
+      "jumping_jacks",
+      "shoulder_taps",
+      "plank"
+    ],
+    "HIIT_B": [
+      "incline_pushups",
+      "squats",
+      "arm_circles",
+      "high_knees",
+      "wall_sit"
+    ],
+    "HIIT_C": [
+      "knee_raises",
+      "russian_twists",
+      "jumping_jacks",
+      "glute_bridges",
+      "side_plank"
+    ]
+  },
+  "meal_options": {
+    "proteins": [
+      "eggs",
+      "beans",
+      "fish",
+      "chicken"
+    ],
+    "carbs": [
+      "potatoes",
+      "yam",
+      "plantain"
+    ],
+    "vegetables": [
+      "cabbage",
+      "cucumber",
+      "ugu",
+      "efo",
+      "waterleaf",
+      "spinach"
+    ],
+    "spices": [
+      "ginger",
+      "garlic",
+      "turmeric",
+      "black_pepper"
+    ]
+  },
+  "daily_log_schema": {
+    "date": "YYYY-MM-DD",
+    "morning_workout_done": "boolean",
+    "evening_walk_minutes": "int",
+    "pushups": "int",
+    "squats": "int",
+    "jumping_jacks": "int",
+    "weight_kg": "float",
+    "meal1": "string",
+    "meal2": "string",
+    "water_liters": "float",
+    "green_tea_cups": "int",
+    "notes": "string"
+  }
+}

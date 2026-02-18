@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert 
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
+import { validateMealInput } from '@repo/shared';
 
 export default function MealsScreen() {
     const { user } = useAuth();
@@ -37,18 +38,23 @@ export default function MealsScreen() {
 
         setLoading(true);
         try {
-            const { error } = await supabase.from('meals').insert({
-                user_id: user.id,
+            // Use shared validation to enforce defaults
+            const mealData = validateMealInput({
                 date: today,
                 quality,
                 description: log,
-                green_tea_cups: 0 // Placeholder
+                green_tea_cups: 0
+            });
+
+            const { error } = await supabase.from('meals').insert({
+                user_id: user.id,
+                ...mealData
             });
 
             if (error) throw error;
 
             setLog('');
-            fetchHistory(); // Refresh list
+            fetchHistory();
             Alert.alert("Logged", "Meal tracked successfully!");
         } catch (e: any) {
             Alert.alert("Error", e.message);

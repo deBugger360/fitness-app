@@ -1,5 +1,8 @@
 export * from '@repo/types';
 
+// Aliases for backward compatibility with existing code that used 'Workout' or 'Meal'
+export type { WorkoutLog as Workout, MealLog as Meal } from '@repo/types';
+
 // Keep legacy types if distinct, but favor @repo/types
 export interface Recommendation {
     id: string;

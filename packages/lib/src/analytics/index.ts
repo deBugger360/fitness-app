@@ -3,9 +3,9 @@ import {
     WorkoutLog,
     MealLog,
     SugarLog,
-    Foundation,
     DailyScore
 } from '@repo/types';
+import { Foundation } from '@repo/shared';
 
 // Constants for Scoring
 const SCORE_WEIGHTS = {

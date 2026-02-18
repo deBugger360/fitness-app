@@ -146,7 +146,7 @@ export default function TodayScreen({ navigation }: any) {
                 <View style={styles(theme).header}>
                     <View>
                         <Text style={styles(theme).greeting}>Good Morning,</Text>
-                        <Text style={styles.name}>{userName.charAt(0).toUpperCase() + userName.slice(1)}</Text>
+                        <Text style={styles(theme).name}>{userName.charAt(0).toUpperCase() + userName.slice(1)}</Text>
                     </View>
                     <HapticButton style={styles(theme).profileButton} onPress={() => navigation.navigate('Profile')}>
                         <Ionicons name="person-circle-outline" size={40} color={theme.colors.textSecondary} />

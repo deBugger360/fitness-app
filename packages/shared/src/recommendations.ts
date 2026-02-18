@@ -1,4 +1,5 @@
-import { Recommendation, Workout, Meal, SugarLog, Foundation } from './types';
+import { Recommendation, Foundation } from './types';
+import { WorkoutLog as Workout, MealLog as Meal, SugarLog } from '@repo/types';
 
 export const calculateRecommendations = (
     workouts: Workout[],
@@ -88,7 +89,7 @@ export const calculateRecommendations = (
     // 4. Habit Stacking
     // If workout consistency is low but meal logging is high
     const workoutConsistency = recentWorkouts.length;
-    const mealConsistency = meals.reduce((acc: number, m: Meal) => acc + (m.lunch || m.dinner ? 1 : 0), 0);
+    const mealConsistency = meals.reduce((acc: number, m: Meal) => acc + (m.description ? 1 : 0), 0);
 
     if (mealConsistency > 5 && workoutConsistency < 3) {
         recommendations.push({

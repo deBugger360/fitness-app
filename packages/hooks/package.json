@@ -1,0 +1,24 @@
+{
+    "name": "@repo/hooks",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "lint": "eslint \"**/*.ts*\"",
+        "type-check": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@repo/types": "*",
+        "@repo/shared": "*",
+        "@repo/lib": "*",
+        "@supabase/supabase-js": "^2.39.0"
+    },
+    "peerDependencies": {
+        "react": ">=18.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.0.0",
+        "@types/react": "^18.0.0"
+    }
+}

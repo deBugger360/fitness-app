@@ -1,16 +1,13 @@
 {
     "name": "@repo/types",
     "version": "1.0.0",
-    "main": "./dist/index.js",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
     "scripts": {
-        "build": "tsup src/index.ts --format cjs,esm --dts",
-        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "build": "tsc",
         "lint": "eslint ."
     },
     "devDependencies": {
-        "tsup": "^8.0.0",
         "typescript": "^5.0.0"
     },
     "dependencies": {

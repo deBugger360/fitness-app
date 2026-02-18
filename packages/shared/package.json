@@ -8,6 +8,9 @@
         "build": "tsc",
         "lint": "eslint \"**/*.ts*\""
     },
+    "dependencies": {
+        "@repo/types": "*"
+    },
     "devDependencies": {
         "typescript": "^5.0.0",
         "eslint": "^9.0.0"

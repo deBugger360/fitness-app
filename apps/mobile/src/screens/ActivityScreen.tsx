@@ -5,15 +5,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
+import { FOUNDATION_PRINCIPLES } from '@repo/shared';
 
-// Default Foundational Habits
-const DEFAULT_HABITS = [
-    { id: 'hydration', label: 'Drink 3L Water', icon: 'water-outline' },
-    { id: 'sleep', label: '7+ Hours Sleep', icon: 'moon-outline' },
-    { id: 'protein', label: 'Eat High Protein', icon: 'restaurant-outline' },
-    { id: 'steps', label: '10k Steps', icon: 'walk-outline' },
-    { id: 'mindfulness', label: 'Meditation / Read', icon: 'book-outline' },
-];
+// Map lucide icon names (used on web) to Ionicons equivalents for mobile
+const LUCIDE_TO_IONICONS: Record<string, string> = {
+    Moon: 'moon-outline',
+    Droplets: 'water-outline',
+    Utensils: 'restaurant-outline',
+    Activity: 'walk-outline',
+    Sun: 'sunny-outline',
+    Brain: 'book-outline',
+    ShieldOff: 'shield-outline',
+    SmartphoneOff: 'phone-portrait-outline',
+    Heart: 'heart-outline',
+    Book: 'book-outline',
+    Feather: 'pencil-outline',
+};
 
 export default function ActivityScreen() {
     const { user } = useAuth();
@@ -88,31 +95,38 @@ export default function ActivityScreen() {
             <ScrollView contentContainerStyle={styles.listContainer}>
                 <View style={styles.card}>
                     <Text style={styles.cardTitle}>Daily Non-Negotiables</Text>
-                    {DEFAULT_HABITS.map((habit) => (
-                        <TouchableOpacity
-                            key={habit.id}
-                            style={styles.habitRow}
-                            onPress={() => toggleHabit(habit.id)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.habitInfo}>
-                                <View style={[styles.iconBox, habits[habit.id] && styles.iconBoxActive]}>
-                                    <Ionicons
-                                        name={habit.icon as any}
-                                        size={22}
-                                        color={habits[habit.id] ? '#fff' : theme.colors.textSecondary}
-                                    />
+                    {FOUNDATION_PRINCIPLES.map((principle) => {
+                        const ionicon = LUCIDE_TO_IONICONS[principle.icon] || 'checkmark-circle-outline';
+                        const isChecked = !!habits[principle.id];
+                        return (
+                            <TouchableOpacity
+                                key={principle.id}
+                                style={styles.habitRow}
+                                onPress={() => toggleHabit(principle.id)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.habitInfo}>
+                                    <View style={[styles.iconBox, isChecked && styles.iconBoxActive]}>
+                                        <Ionicons
+                                            name={ionicon as any}
+                                            size={22}
+                                            color={isChecked ? '#fff' : theme.colors.textSecondary}
+                                        />
+                                    </View>
+                                    <View>
+                                        <Text style={[styles.habitLabel, isChecked && styles.habitLabelActive]}>
+                                            {principle.name}
+                                        </Text>
+                                        <Text style={styles.habitDescription}>{principle.description}</Text>
+                                    </View>
                                 </View>
-                                <Text style={[styles.habitLabel, habits[habit.id] && styles.habitLabelActive]}>
-                                    {habit.label}
-                                </Text>
-                            </View>
 
-                            <View style={[styles.checkbox, habits[habit.id] && styles.checkboxActive]}>
-                                {habits[habit.id] && <Ionicons name="checkmark" size={16} color="#fff" />}
-                            </View>
-                        </TouchableOpacity>
-                    ))}
+                                <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
+                                    {isChecked && <Ionicons name="checkmark" size={16} color="#fff" />}
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             </ScrollView>
         </View>
@@ -201,6 +215,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     habitLabelActive: {
         color: theme.colors.text,
         fontWeight: '600',
+    },
+    habitDescription: {
+        fontSize: 12,
+        color: theme.colors.textSecondary,
+        marginTop: 2,
     },
     checkbox: {
         width: 24,

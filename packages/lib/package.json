@@ -5,15 +5,22 @@
     "main": "./src/index.ts",
     "types": "./src/index.ts",
     "scripts": {
-        "lint": "eslint \"**/*.ts*\""
+        "lint": "eslint \"**/*.ts*\"",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage"
     },
     "dependencies": {
-        "@repo/types": "^1.0.0",
+        "@repo/shared": "*",
+        "@repo/types": "*",
         "@supabase/ssr": "^0.1.0",
         "@supabase/supabase-js": "^2.39.0"
     },
     "devDependencies": {
+        "@types/jest": "^30.0.0",
         "eslint": "^8.0.0",
+        "jest": "^30.2.0",
+        "ts-jest": "^29.4.6",
         "typescript": "^5.0.0"
     },
     "keywords": [],

@@ -7,34 +7,14 @@ import {
     EventCategory,
     EventAction
 } from "@repo/shared";
+import { logAnalyticsEvent as logSharedEvent } from "@repo/lib";
 
 export type { EventCategory, EventAction };
 
-// Re-export types for backward compatibility if needed, 
-// but better to import from @repo/shared in other files.
-// For now, let's keep the logging function here.
-
+// Wrapper for shared analytics logging
 export const logAnalyticsEvent = async (event: AnalyticsEvent) => {
     const supabase = createClient();
-
-    try {
-        const { error } = await supabase.from('analytics_events').insert({
-            user_id: event.userId,
-            event_category: event.category,
-            event_action: event.action,
-            value: event.value || 0,
-            tags: event.tags || [],
-            context: event.context || {},
-            occurred_at: event.occurredAt || new Date().toISOString()
-        });
-
-        if (error) {
-            console.error("Error logging analytics event:", error);
-            // Don't throw, let app continue. It's just analytics.
-        }
-    } catch (e) {
-        console.error("Exception logging analytics event:", e);
-    }
+    await logSharedEvent(supabase, event);
 };
 
 // Helper function to normalize Foundation data
