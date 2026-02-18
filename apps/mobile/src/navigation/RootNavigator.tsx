@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthProvider';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
-import HomeScreen from '../screens/HomeScreen';
+import TabNavigator from './TabNavigator';
 import { Button } from 'react-native';
 
 const Stack = createNativeStackNavigator();
@@ -22,13 +22,9 @@ export default function RootNavigator() {
                 {session ? (
                     // App Stack
                     <Stack.Screen
-                        name="Home"
-                        component={HomeScreen}
-                        options={{
-                            headerRight: () => (
-                                <Button onPress={signOut} title="Log Out" />
-                            ),
-                        }}
+                        name="Main"
+                        component={TabNavigator}
+                        options={{ headerShown: false }}
                     />
                 ) : (
                     // Auth Stack

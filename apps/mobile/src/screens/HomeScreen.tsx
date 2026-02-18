@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { sharedFunction, analyzeRealityLog } from '@repo/shared';
-import { useAuth } from './src/context/AuthProvider';
+import { useAuth } from '../context/AuthProvider';
 
 export default function HomeScreen() {
     const analysis = analyzeRealityLog("I ate a burger and fries", "stressed");
