@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
+import { BehaviorLog } from "@repo/shared";
 
 export const saveRealityLog = async (foods: string, mood: string, calorieDensity: string, tags: string[], suggestions: string) => {
     const supabase = createClient();
@@ -28,7 +29,7 @@ export const saveRealityLog = async (foods: string, mood: string, calorieDensity
         throw error;
     }
 
-    return data;
+    return data as BehaviorLog;
 };
 
 export const getRealityLogs = async (userId: string, date: string) => {
@@ -41,5 +42,5 @@ export const getRealityLogs = async (userId: string, date: string) => {
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as BehaviorLog[];
 };

@@ -41,3 +41,16 @@ export interface Foundation {
     notes?: Record<string, any> | null;
     [key: string]: any;
 }
+
+export interface BehaviorLog {
+    id?: string;
+    user_id?: string;
+    date: string;
+    foods: string;
+    mood: string;
+    calorie_density: string;
+    tags: string[];
+    suggestions: string;
+    created_at?: string;
+    [key: string]: any;
+}

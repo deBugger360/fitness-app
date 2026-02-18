@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import planData from '@/fitness_plan.json';
+import {
+    planData,
+    getBasePlanForDay,
+    calculateWaterTarget,
+    calculateFastingWindow,
+    calculateUserLevel,
+    mapExercises
+} from '@repo/shared';
 
 export interface ExercisePlan {
     name: string;
@@ -29,35 +36,21 @@ export function usePersonalizedPlan(currentUserId: string | null) {
             const todayIndex = new Date().getDay();
             const dayName = days[todayIndex];
 
-            // 1. Get Base Plan from JSON
-            const scheduleString = (planData.weekly_schedule as any)[dayName];
-            let workoutType = 'Rest Day';
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            let rawExercises: string[] = [];
+            // 1. Get Base Plan from Shared Logic
+            const { workoutType, rawExercises } = getBasePlanForDay(dayName);
 
-            if (scheduleString && scheduleString !== 'rest') {
-                workoutType = scheduleString;
-                const knownWorkouts = Object.keys(planData.workouts);
-                const matchedKey = knownWorkouts.find(key => scheduleString.startsWith(key));
-                if (matchedKey) {
-                    rawExercises = (planData.workouts as any)[matchedKey];
-                }
-            }
-
-            // 2. Determine User Level & Progressive Overload
+            // 2. Base values from Shared Data
             let level = "Beginner";
             let streak = 0;
             let repMultiplier = 1.0;
-            let waterTarget = planData.profile.water_liters_per_day; // Default base
-            let fastingWindow = planData.profile.fasting_window; // Default base
+            let waterTarget = planData.profile.water_liters_per_day;
+            let fastingWindow = planData.profile.fasting_window;
 
             if (currentUserId) {
-                // Set loading true immediately when user changes/re-calculates to avoid stale data flash
                 setLoading(true);
 
                 try {
                     const supabase = createClient();
-                    // Fetch User Profile
                     const { data: user } = await supabase
                         .from('profiles')
                         .select('*')
@@ -65,24 +58,11 @@ export function usePersonalizedPlan(currentUserId: string | null) {
                         .single();
 
                     if (user) {
-                        // Calculate Water Goal: Weight (kg) * 0.033 + Activity Buffer
-                        // Rounding to nearest 0.5 for cleaner UX
-                        let calculatedWater = (user.weight_kg || 75) * 0.033;
-                        if (user.activity_level === 'active') calculatedWater += 0.5;
-                        if (user.activity_level === 'very_active') calculatedWater += 1.0;
-
-                        // Round to nearest 0.5
-                        waterTarget = Math.round(calculatedWater * 2) / 2;
-
-                        // Adjust Fasting Window based on Goals
-                        if (user.goals && user.goals.includes('fat_loss')) {
-                            fastingWindow = "16:8"; // Stricter for fat loss
-                        } else if (user.goals && (user.goals.includes('strength') || user.goals.includes('stamina'))) {
-                            fastingWindow = "14:10"; // More fueling time for performance
-                        }
+                        waterTarget = calculateWaterTarget(user.weight_kg, user.activity_level);
+                        fastingWindow = calculateFastingWindow(user.goals);
                     }
 
-                    // Fetch last 14 days of history
+                    // Fetch history logic (Supabase) stays here as it's data access
                     const endDate = new Date();
                     const startDate = new Date();
                     startDate.setDate(endDate.getDate() - 14);
@@ -95,61 +75,21 @@ export function usePersonalizedPlan(currentUserId: string | null) {
                         .eq('user_id', currentUserId);
 
                     const history = historyData || [];
-
-                    // Calculate consistency
                     const workoutCount = history.filter((h: any) => h.morning_hiit_completed === 1).length;
 
-                    // Level logic: Combine frequency + self-reported activity
-                    if (workoutCount > 8 || (user?.activity_level === 'active' && workoutCount > 5)) {
-                        level = "Advanced";
-                        repMultiplier = 1.5;
-                    } else if (workoutCount > 4 || user?.activity_level === 'moderate') {
-                        level = "Intermediate";
-                        repMultiplier = 1.2;
-                    }
+                    // Use Shared Level Logic
+                    const levelResult = calculateUserLevel(workoutCount, user?.activity_level);
+                    level = levelResult.level;
+                    repMultiplier = levelResult.repMultiplier;
 
-                    // Simple streak calc (consecutive days backward from yesterday)
-                    // (Omitted for brevity in this specific prompt logic, just using workout count as proxy)
                     streak = workoutCount;
                 } catch (e) {
                     console.error("Error fetching history", e);
                 }
             }
 
-            // 3. Map Exercises with Logic
-            const processedExercises: ExercisePlan[] = rawExercises.map(exName => {
-                let target = 15;
-                let unit = 'reps';
-                let tip = "";
-
-                const nameLower = exName.toLowerCase();
-
-                if (nameLower.includes("pushup")) {
-                    target = Math.ceil(10 * repMultiplier);
-                    tip = "Keep core tight to protect lower back. Knees down if needed.";
-                } else if (nameLower.includes("squat")) {
-                    target = Math.ceil(20 * repMultiplier);
-                    tip = "Weight in heels. Don't round your spine.";
-                } else if (nameLower.includes("hollow") || nameLower.includes("plank") || nameLower.includes("wall sit")) {
-                    target = Math.ceil(30 * repMultiplier); // seconds
-                    unit = 's';
-                    tip = "Hold steady. Breathe evenly.";
-                    if (nameLower.includes("hollow")) tip = "Press lower back into floor/mat.";
-                } else if (nameLower.includes("jumping") || nameLower.includes("jack")) {
-                    target = Math.ceil(30 * repMultiplier);
-                    tip = "Soft knees on landing. Step-out for low impact.";
-                } else {
-                    target = Math.ceil(15 * repMultiplier);
-                    tip = "Focus on form over speed.";
-                }
-
-                return {
-                    name: exName,
-                    targetReps: target,
-                    unit,
-                    safetyTip: tip
-                };
-            });
+            // 3. Map Exercises with Shared Logic
+            const processedExercises = mapExercises(rawExercises, repMultiplier);
 
             setPlan({
                 day: dayName,
