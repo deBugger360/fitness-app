@@ -1,20 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, RefreshControl } from 'react-native';
+
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthProvider';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTodayData } from '../hooks/useTodayData';
+import { HapticButton } from '../components/ui/HapticButton';
+import Animated, { useSharedValue, withTiming, useAnimatedProps } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
+// Animated Circle Component
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// Components
 const ConsistencyRing = ({ score }: { score: number }) => {
     const radius = 80;
     const strokeWidth = 15;
     const circumference = 2 * Math.PI * radius;
-    const progress = score / 100;
-    const strokeDashoffset = circumference - progress * circumference;
+    const progress = useSharedValue(0);
+
+    useEffect(() => {
+        progress.value = withTiming(score / 100, { duration: 1500 });
+    }, [score]);
+
+    const animatedProps = useAnimatedProps(() => {
+        const strokeDashoffset = circumference - progress.value * circumference;
+        return {
+            strokeDashoffset,
+        };
+    });
 
     return (
         <View style={styles.ringContainer}>
@@ -28,14 +42,14 @@ const ConsistencyRing = ({ score }: { score: number }) => {
                         strokeWidth={strokeWidth}
                         fill="transparent"
                     />
-                    <Circle
+                    <AnimatedCircle
                         cx={radius + strokeWidth / 2}
                         cy={radius + strokeWidth / 2}
                         r={radius}
                         stroke="#4F46E5" // Indigo-600
                         strokeWidth={strokeWidth}
                         strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
+                        animatedProps={animatedProps}
                         strokeLinecap="round"
                         fill="transparent"
                     />
@@ -49,13 +63,21 @@ const ConsistencyRing = ({ score }: { score: number }) => {
     );
 };
 
-const QuickAction = ({ label, icon, onPress, color = "#4F46E5" }: any) => (
-    <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+const QuickAction = ({ label, icon, onPress, color = "#4F46E5", count = 0 }: any) => (
+    <HapticButton
+        style={styles.actionButton}
+        onPress={onPress}
+        hapticType={Haptics.ImpactFeedbackStyle.Medium}
+    >
         <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon} size={28} color={color} />
         </View>
-        <Text style={styles.actionLabel}>{label}</Text>
-    </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+            <Text style={styles.actionLabel}>{label}</Text>
+            {count > 0 && <Text style={styles.actionCount}>{count} today</Text>}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+    </HapticButton>
 );
 
 const StatCard = ({ label, value, unit }: any) => (
@@ -66,7 +88,7 @@ const StatCard = ({ label, value, unit }: any) => (
     </View>
 );
 
-export default function TodayScreen() {
+export default function TodayScreen({ navigation }: any) {
     const { user } = useAuth();
     const { loading, score, streak, stats, logAction, refresh } = useTodayData(user?.id);
 
@@ -85,9 +107,9 @@ export default function TodayScreen() {
                         <Text style={styles.greeting}>Good Morning,</Text>
                         <Text style={styles.name}>{userName.charAt(0).toUpperCase() + userName.slice(1)}</Text>
                     </View>
-                    <TouchableOpacity style={styles.profileButton}>
+                    <HapticButton style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
                         <Ionicons name="person-circle-outline" size={40} color="#64748b" />
-                    </TouchableOpacity>
+                    </HapticButton>
                 </View>
 
                 {/* Hero: Consistency Ring */}
@@ -103,31 +125,35 @@ export default function TodayScreen() {
                 </View>
 
                 {/* Quick Actions */}
-                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <Text style={styles.sectionTitle}>Quick Logger</Text>
                 <View style={styles.actionGrid}>
                     <QuickAction
                         label="Log Workout"
                         icon="barbell"
                         color="#F59E0B" // Amber
+                        count={stats.workouts}
                         onPress={() => logAction('workout')}
                     />
                     <QuickAction
                         label="Log Meal"
                         icon="restaurant"
                         color="#10B981" // Emerald
-                        onPress={() => logAction('meal')}
+                        count={stats.meals}
+                        onPress={() => navigation.navigate('Meals')}
                     />
                     <QuickAction
                         label="Log Water"
                         icon="water"
                         color="#3B82F6" // Blue
+                        count={stats.water}
                         onPress={() => logAction('water')}
                     />
                     <QuickAction
-                        label="Log Craving"
+                        label="Log Sugar"
                         icon="alert-circle"
                         color="#EF4444" // Red
-                        onPress={() => logAction('craving')}
+                        count={stats.cravings}
+                        onPress={() => navigation.navigate('Sugar')}
                     />
                 </View>
             </ScrollView>
@@ -239,13 +265,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     actionGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
         gap: 16,
     },
     actionButton: {
-        width: '47%',
+        width: '100%',
         backgroundColor: '#fff',
         padding: 16,
         borderRadius: 24,
@@ -263,12 +286,16 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: 16,
     },
     actionLabel: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         color: '#334155',
-        flex: 1,
     },
+    actionCount: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2
+    }
 });

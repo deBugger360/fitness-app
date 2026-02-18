@@ -1,20 +1,27 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Modal, Dimensions } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
 import { SugarLog } from '@repo/types';
 import { getHighRiskHours } from '@repo/lib';
+import Animated, { useSharedValue, withRepeat, withTiming, useAnimatedStyle, withSequence } from 'react-native-reanimated';
+import { HapticButton } from '../components/ui/HapticButton';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
 export default function SugarScreen() {
     const { user } = useAuth();
     const [streak, setStreak] = useState(0);
-    const [shieldOpacity] = useState(new Animated.Value(0.3));
     const [logs, setLogs] = useState<SugarLog[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Shield Animation
+    const shieldScale = useSharedValue(1);
+    const shieldOpacity = useSharedValue(0.3);
 
     // Logger Modal State
     const [modalVisible, setModalVisible] = useState(false);
@@ -28,8 +35,9 @@ export default function SugarScreen() {
 
     const refreshData = useCallback(async () => {
         if (!user) return;
+        setRefreshing(true);
 
-        // 1. Fetch recent logs for history & analytics
+        // 1. Fetch recent logs
         const { data: recentLogs } = await supabase
             .from('sugar_logs')
             .select('*')
@@ -39,7 +47,7 @@ export default function SugarScreen() {
 
         if (recentLogs) setLogs(recentLogs as SugarLog[]);
 
-        // 2. Calculate Streak (Days since last Intake)
+        // 2. Calculate Streak
         const { data: lastIntake } = await supabase
             .from('sugar_logs')
             .select('created_at')
@@ -56,15 +64,13 @@ export default function SugarScreen() {
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             setStreak(diffDays);
         } else {
-            // If no intakes found, calculate from account creation or start of logs?
-            // For MVP: assume 0 if no history, or maybe check first log date if exist.
-            // Let's assume 0 strictly to encourage logging.
+            // No intake found? Count from first log or just 0
             setStreak(recentLogs && recentLogs.length > 0 ?
                 Math.floor((new Date().getTime() - new Date(recentLogs[recentLogs.length - 1].created_at!).getTime()) / (1000 * 3600 * 24))
                 : 0
             );
         }
-
+        setRefreshing(false);
     }, [user]);
 
     useFocusEffect(
@@ -75,15 +81,35 @@ export default function SugarScreen() {
     );
 
     const startPulse = () => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(shieldOpacity, { toValue: 1, duration: 2000, useNativeDriver: true }),
-                Animated.timing(shieldOpacity, { toValue: 0.3, duration: 2000, useNativeDriver: true })
-            ])
-        ).start();
+        shieldOpacity.value = withRepeat(
+            withSequence(
+                withTiming(0.6, { duration: 1500 }),
+                withTiming(0.2, { duration: 1500 })
+            ),
+            -1,
+            true
+        );
+        shieldScale.value = withRepeat(
+            withSequence(
+                withTiming(1.05, { duration: 1500 }),
+                withTiming(1, { duration: 1500 })
+            ),
+            -1,
+            true
+        );
     };
 
+    const animatedShieldStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: shieldScale.value }],
+    }));
+
+    const animatedPulseStyle = useAnimatedStyle(() => ({
+        opacity: shieldOpacity.value,
+        transform: [{ scale: shieldScale.value }],
+    }));
+
     const openLogger = (type: 'craving' | 'intake') => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setLogType(type);
         setTrigger('');
         setMood('');
@@ -93,13 +119,14 @@ export default function SugarScreen() {
 
     const submitLog = async () => {
         if (!user) return;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         const isResisted = logType === 'craving';
 
         const newLog: Partial<SugarLog> = {
             user_id: user.id,
-            date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-            created_at: new Date().toISOString(),         // Full timestamp
+            date: new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
             type: logType,
             success_resisted: isResisted,
             trigger: trigger || 'Unknown',
@@ -111,7 +138,7 @@ export default function SugarScreen() {
 
         if (!error) {
             setModalVisible(false);
-            refreshData(); // Refresh list and streak
+            refreshData();
         } else {
             alert('Failed to save log');
         }
@@ -123,14 +150,21 @@ export default function SugarScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-                <LinearGradient colors={['#ffffff', '#f8fafc']} style={styles.header}>
+            <ScrollView
+                contentContainerStyle={{ paddingBottom: 100 }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} />}
+            >
+                <LinearGradient colors={['#ffffff', '#f1f5f9']} style={styles.header}>
                     <Text style={styles.title}>Sugar Shield</Text>
 
                     <View style={styles.shieldContainer}>
-                        <Animated.View style={[styles.pulseRing, { opacity: shieldOpacity }]}>
+                        <Animated.View style={[styles.pulseRing, animatedPulseStyle]}>
+                            <Ionicons name="shield" size={160} color="#4F46E5" />
+                        </Animated.View>
+                        <Animated.View style={[styles.shieldIcon, animatedShieldStyle]}>
                             <Ionicons name="shield-checkmark" size={140} color="#4F46E5" />
                         </Animated.View>
+
                         <View style={styles.streakBadge}>
                             <Text style={styles.streakNumber}>{streak}</Text>
                             <Text style={styles.streakLabel}>DAYS FREE</Text>
@@ -140,7 +174,7 @@ export default function SugarScreen() {
                     {/* Risk Insight */}
                     {topRiskHour !== null && (
                         <View style={styles.insightBox}>
-                            <Ionicons name="alert-circle-outline" size={20} color="#ea580c" />
+                            <Ionicons name="stats-chart" size={20} color="#ea580c" />
                             <Text style={styles.insightText}>
                                 High risk time: <Text style={{ fontWeight: '700' }}>{topRiskHour}:00 - {topRiskHour + 1}:00</Text>
                             </Text>
@@ -149,21 +183,25 @@ export default function SugarScreen() {
                 </LinearGradient>
 
                 <View style={styles.actions}>
-                    <TouchableOpacity
+                    <HapticButton
                         style={[styles.actionButton, styles.resistButton]}
-                        onPress={() => openLogger('craving')}>
+                        onPress={() => openLogger('craving')}
+                        hapticType={Haptics.ImpactFeedbackStyle.Heavy}
+                    >
                         <Ionicons name="flash" size={24} color="#fff" />
                         <Text style={styles.actionText}>Log Craving</Text>
                         <Text style={styles.actionSubtext}>I resisted it!</Text>
-                    </TouchableOpacity>
+                    </HapticButton>
 
-                    <TouchableOpacity
+                    <HapticButton
                         style={[styles.actionButton, styles.relapseButton]}
-                        onPress={() => openLogger('intake')}>
+                        onPress={() => openLogger('intake')}
+                        hapticType={Haptics.ImpactFeedbackStyle.Medium}
+                    >
                         <Ionicons name="refresh-circle" size={28} color="#fff" />
                         <Text style={styles.actionText}>Log Slip-up</Text>
                         <Text style={styles.actionSubtext}>Reset Streak</Text>
-                    </TouchableOpacity>
+                    </HapticButton>
                 </View>
 
                 {/* Recent History */}
@@ -215,44 +253,44 @@ export default function SugarScreen() {
                         <Text style={styles.label}>What triggered it?</Text>
                         <View style={styles.chipContainer}>
                             {TRIGGERS.map(t => (
-                                <TouchableOpacity
+                                <HapticButton
                                     key={t}
                                     style={[styles.chip, trigger === t && styles.chipActive]}
                                     onPress={() => setTrigger(t)}
                                 >
                                     <Text style={[styles.chipText, trigger === t && styles.chipTextActive]}>{t}</Text>
-                                </TouchableOpacity>
+                                </HapticButton>
                             ))}
                         </View>
 
                         <Text style={styles.label}>Current Mood?</Text>
                         <View style={styles.chipContainer}>
                             {MOODS.map(m => (
-                                <TouchableOpacity
+                                <HapticButton
                                     key={m}
                                     style={[styles.chip, mood === m && styles.chipActive]}
                                     onPress={() => setMood(m)}
                                 >
                                     <Text style={[styles.chipText, mood === m && styles.chipTextActive]}>{m}</Text>
-                                </TouchableOpacity>
+                                </HapticButton>
                             ))}
                         </View>
 
                         <Text style={styles.label}>Intensity: {severity}/10</Text>
                         <View style={styles.sliderRow}>
                             {[1, 3, 5, 7, 10].map(v => (
-                                <TouchableOpacity key={v} onPress={() => setSeverity(v)} style={[
+                                <HapticButton key={v} onPress={() => setSeverity(v)} style={[
                                     styles.severityBtn,
                                     severity === v && { backgroundColor: '#4F46E5', borderColor: '#4F46E5' }
                                 ]}>
                                     <Text style={[styles.severityText, severity === v && { color: '#fff' }]}>{v}</Text>
-                                </TouchableOpacity>
+                                </HapticButton>
                             ))}
                         </View>
 
-                        <TouchableOpacity onPress={submitLog} style={styles.saveBtn}>
+                        <HapticButton onPress={submitLog} style={styles.saveBtn} hapticType={Haptics.NotificationFeedbackType.Success}>
                             <Text style={styles.saveText}>Save Log</Text>
-                        </TouchableOpacity>
+                        </HapticButton>
                     </View>
                 </View>
             </Modal>
@@ -262,11 +300,12 @@ export default function SugarScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
-    header: { padding: 24, paddingTop: 60, alignItems: 'center' },
+    header: { padding: 24, paddingTop: 60, alignItems: 'center', borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
     title: { fontSize: 24, fontWeight: '800', color: '#0f172a', marginBottom: 20 },
-    shieldContainer: { alignItems: 'center', justifyContent: 'center', height: 200, marginBottom: 20 },
-    pulseRing: { position: 'absolute' },
-    streakBadge: { position: 'absolute', alignItems: 'center' },
+    shieldContainer: { alignItems: 'center', justifyContent: 'center', height: 220, marginBottom: 10, position: 'relative' },
+    pulseRing: { position: 'absolute', opacity: 0.2 },
+    shieldIcon: { zIndex: 1 },
+    streakBadge: { position: 'absolute', alignItems: 'center', zIndex: 2 },
     streakNumber: { fontSize: 40, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 10 },
     streakLabel: { fontSize: 12, fontWeight: '700', color: '#e2e8f0', letterSpacing: 1 },
 
@@ -276,10 +315,10 @@ const styles = StyleSheet.create({
     },
     insightText: { color: '#9a3412', marginLeft: 8, fontSize: 14 },
 
-    actions: { flexDirection: 'row', padding: 20, gap: 12 },
+    actions: { flexDirection: 'row', padding: 20, gap: 12, marginTop: -20 },
     actionButton: {
         flex: 1, padding: 20, borderRadius: 20, alignItems: 'center',
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4
     },
     resistButton: { backgroundColor: '#4F46E5' }, // Indigo
     relapseButton: { backgroundColor: '#ef4444' }, // Red
