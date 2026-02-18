@@ -17,6 +17,6 @@ config.resolver.nodeModulesPaths = [
 
 // 3. Ensure we can resolve imports from the shared package even if they are .ts
 // (Expo default config usually includes ts/tsx in sourceExts)
-config.resolver.sourceExts.push("ts", "tsx", "cjs", "mjs", "json");
+// config.resolver.sourceExts.push("ts", "tsx", "cjs", "mjs", "json");
 
 module.exports = config;
