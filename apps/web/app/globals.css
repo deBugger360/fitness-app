@@ -76,6 +76,28 @@
   --spacing-12:  48px;
   --spacing-16:  64px;
 
+  /* Typography — mirrors @repo/ui/src/theme/colors.ts */
+  --font-size-xs:   10px;
+  --font-size-sm:   12px;
+  --font-size-base: 14px;
+  --font-size-md:   16px;
+  --font-size-lg:   18px;
+  --font-size-xl:   20px;
+  --font-size-2xl:  24px;
+  --font-size-3xl:  28px;
+  --font-size-4xl:  32px;
+  --font-size-5xl:  40px;
+
+  --font-weight-normal:    400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+  --font-weight-extrabold: 800;
+
+  --line-height-tight:   1.25;
+  --line-height-normal:  1.5;
+  --line-height-relaxed: 1.75;
+
   /* shadcn/ui compatibility aliases (HSL format) */
   --background:             0 0% 100%;
   --foreground:             222.2 84% 4.9%;

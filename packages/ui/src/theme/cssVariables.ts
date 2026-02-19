@@ -1,17 +1,4 @@
-/**
- * cssVariables.ts
- *
- * Converts the shared @repo/ui theme tokens into CSS custom property
- * declarations. Import this in your web app's theme setup to keep
- * CSS variables in sync with the shared design system.
- *
- * Usage (in a Next.js layout or globals.css via a script):
- *   import { lightCssVars, darkCssVars } from '@repo/ui/cssVariables';
- *
- * Or use the pre-built CSS string constants directly in a <style> tag.
- */
-
-import { lightTheme, darkTheme, radius, spacing } from './colors';
+import { lightTheme, darkTheme, radius, spacing, fontSize, fontWeight, lineHeight } from './colors';
 
 /**
  * Converts a camelCase token name to a kebab-case CSS variable name.
@@ -58,6 +45,25 @@ function buildSpacingVars(): Record<string, string> {
 }
 
 /**
+ * Generates CSS variables for the typography scale.
+ * These mirror the tokens in colors.ts so web components can use
+ * `var(--font-size-lg)` instead of hard-coding pixel values.
+ */
+function buildTypographyVars(): Record<string, string> {
+    const vars: Record<string, string> = {};
+    for (const [key, value] of Object.entries(fontSize)) {
+        vars[`--font-size-${key}`] = `${value}px`;
+    }
+    for (const [key, value] of Object.entries(fontWeight)) {
+        vars[`--font-weight-${key}`] = String(value);
+    }
+    for (const [key, value] of Object.entries(lineHeight)) {
+        vars[`--line-height-${key}`] = String(value);
+    }
+    return vars;
+}
+
+/**
  * Converts a variable map to a CSS block string.
  */
 function toCssBlock(vars: Record<string, string>): string {
@@ -74,9 +80,10 @@ export const lightColorVars = buildColorVars(lightTheme.colors);
 export const darkColorVars = buildColorVars(darkTheme.colors);
 export const radiusVars = buildRadiusVars();
 export const spacingVars = buildSpacingVars();
+export const typographyVars = buildTypographyVars();
 
-export const lightCssVars = { ...lightColorVars, ...radiusVars, ...spacingVars };
-export const darkCssVars = { ...darkColorVars, ...radiusVars, ...spacingVars };
+export const lightCssVars = { ...lightColorVars, ...radiusVars, ...spacingVars, ...typographyVars };
+export const darkCssVars = { ...darkColorVars, ...radiusVars, ...spacingVars, ...typographyVars };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Exported CSS strings (for injection into <style> tags or CSS files)

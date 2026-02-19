@@ -244,5 +244,41 @@ export const shadows = {
     },
 } as const;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Font Family Tokens
+// Web uses Geist (loaded by Next.js) with system fallbacks.
+// Mobile uses the platform system font stack.
+// Both apps share the same semantic names; the value differs per platform.
+// ─────────────────────────────────────────────────────────────────────────────
+export const fontFamily = {
+    /**
+     * Primary sans-serif — Geist on web, system on mobile.
+     * On web, `var(--font-geist-sans)` is injected by Next.js; this string
+     * is used as the React Native value only.
+     */
+    sans: 'System',         // RN: system font. Web: overridden by CSS var.
+    mono: 'Courier New',    // RN: monospace. Web: Geist Mono via CSS var.
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Composite Typography Scale
+// Single object grouping all typographic design decisions.
+// ─────────────────────────────────────────────────────────────────────────────
+export const typography = {
+    fontFamily,
+    fontSize,
+    fontWeight,
+    lineHeight,
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Theme Type Exports
+// ─────────────────────────────────────────────────────────────────────────────
 export type AppTheme = typeof lightTheme | typeof darkTheme;
 export type ThemeColors = typeof lightTheme.colors;
+export type Spacing = typeof spacing;
+export type FontSize = typeof fontSize;
+export type FontWeight = typeof fontWeight;
+export type Typography = typeof typography;
+export type Shadows = typeof shadows;
+
