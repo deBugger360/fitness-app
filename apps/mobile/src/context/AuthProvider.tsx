@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
-import { createMobileClient } from '@repo/lib';
+import { createMobileClient, OfflineManager } from '@repo/lib';
 import { ExpoSecureStoreAdapter } from '../lib/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Initialize Supabase Client
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
@@ -36,7 +38,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 setSession(session);
-                setUser(session?.user ?? null);
+                const currentUser = session?.user ?? null;
+                setUser(currentUser);
+
+                if (currentUser) {
+                    await OfflineManager.getInstance().init(AsyncStorage, supabase, currentUser.id);
+                }
             } catch (error) {
                 console.error('Error checking session:', error);
             } finally {
@@ -47,13 +54,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         checkSession();
 
         // Listen for changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-            setUser(session?.user ?? null);
+            const currentUser = session?.user ?? null;
+            setUser(currentUser);
+            if (currentUser) {
+                OfflineManager.getInstance().init(AsyncStorage, supabase, currentUser.id).catch(console.error);
+            }
             setLoading(false);
         });
 
-        return () => subscription.unsubscribe();
+        // Listen for app state changes to retry sync
+        const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'active') {
+                OfflineManager.getInstance().processQueue().catch(console.error);
+            }
+        });
+
+        return () => {
+            authSub.unsubscribe();
+            appStateSub.remove();
+        };
     }, []);
 
     const signOut = async () => {

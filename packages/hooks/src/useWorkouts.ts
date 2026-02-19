@@ -37,6 +37,8 @@ export interface UseWorkoutsResult {
  * // Mobile
  * const { workouts, save } = useWorkouts(supabase, userId, { date: today });
  */
+import { OfflineManager } from '@repo/lib';
+
 export function useWorkouts(
     supabase: SupabaseClient,
     userId: string | undefined,
@@ -47,14 +49,22 @@ export function useWorkouts(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `workouts_${options.date || 'all'}`;
+
+        // 1. Load from cache immediately
+        if (loading) {
+            const cached = await offline.getCached<WorkoutLog[]>(cacheKey);
+            if (cached) {
+                setWorkouts(cached);
+                setLoading(false);
+            }
+        }
+
         if (!userId) {
-            setWorkouts([]);
             setLoading(false);
             return;
         }
-
-        setLoading(true);
-        setError(null);
 
         try {
             let query = supabase
@@ -76,13 +86,19 @@ export function useWorkouts(
 
             const { data, error: fetchError } = await query;
             if (fetchError) throw fetchError;
-            setWorkouts((data as WorkoutLog[]) || []);
+
+            const fetchedWorkouts = (data as WorkoutLog[]) || [];
+            setWorkouts(fetchedWorkouts);
+
+            // Update cache
+            offline.setCache(cacheKey, fetchedWorkouts);
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch workouts');
         } finally {
             setLoading(false);
         }
-    }, [userId, options.date, options.startDate, options.endDate]);
+    }, [userId, options.date, options.startDate, options.endDate, loading]);
 
     useEffect(() => {
         refresh();
@@ -90,22 +106,35 @@ export function useWorkouts(
 
     const save = useCallback(async (data: CreateWorkoutInput): Promise<WorkoutLog | null> => {
         if (!userId) return null;
+
+        // Optimistic update
+        const optimistic: WorkoutLog = {
+            ...data,
+            id: 'temp-' + Date.now(),
+            user_id: userId,
+            created_at: new Date().toISOString()
+        } as WorkoutLog;
+
+        setWorkouts(prev => {
+            const existingIdx = prev.findIndex(w => w.date === data.date);
+            if (existingIdx >= 0) {
+                const next = [...prev];
+                next[existingIdx] = { ...prev[existingIdx], ...data };
+                return next;
+            }
+            return [optimistic, ...prev];
+        });
+
         try {
             const result = await saveWorkout(supabase, userId, data);
-            // Optimistically update local state
-            setWorkouts(prev => {
-                const idx = prev.findIndex(w => w.date === data.date);
-                if (idx >= 0) {
-                    const next = [...prev];
-                    next[idx] = result as WorkoutLog;
-                    return next;
-                }
-                return [result as WorkoutLog, ...prev];
-            });
+            // Replace temp with real result if needed, or refresh
+            // But saveWorkout returns the updated object, so let's update state with real ID
+            setWorkouts(prev => prev.map(w => w.date === data.date ? (result as WorkoutLog) : w));
             return result as WorkoutLog;
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to save workout');
-            return null;
+            console.warn('Online save failed, queuing offline mutation');
+            OfflineManager.getInstance().queueMutation('workouts', 'UPSERT', { ...data, user_id: userId });
+            return optimistic;
         }
     }, [supabase, userId]);
 

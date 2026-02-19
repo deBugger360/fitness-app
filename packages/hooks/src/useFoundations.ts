@@ -28,6 +28,8 @@ export interface UseFoundationsResult {
  *
  * Works in React DOM (web) and React Native (mobile).
  */
+import { OfflineManager } from '@repo/lib';
+
 export function useFoundations(
     supabase: SupabaseClient,
     userId: string | undefined,
@@ -38,14 +40,21 @@ export function useFoundations(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `foundations_${options.date || 'all'}`;
+
+        if (loading) {
+            const cached = await offline.getCached<Foundation[]>(cacheKey);
+            if (cached) {
+                setFoundations(cached);
+                setLoading(false);
+            }
+        }
+
         if (!userId) {
-            setFoundations([]);
             setLoading(false);
             return;
         }
-
-        setLoading(true);
-        setError(null);
 
         try {
             let query = supabase
@@ -66,13 +75,18 @@ export function useFoundations(
 
             const { data, error: fetchError } = await query;
             if (fetchError) throw fetchError;
-            setFoundations((data as Foundation[]) || []);
+
+            const fetched = (data as Foundation[]) || [];
+            setFoundations(fetched);
+
+            offline.setCache(cacheKey, fetched);
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch foundations');
         } finally {
             setLoading(false);
         }
-    }, [userId, options.date, options.startDate, options.endDate]);
+    }, [userId, options.date, options.startDate, options.endDate, loading]);
 
     useEffect(() => {
         refresh();
@@ -86,52 +100,47 @@ export function useFoundations(
         if (!userId) return null;
 
         const score = completed.length;
+        const foundationData = {
+            user_id: userId,
+            date,
+            completed_principles: completed,
+            notes,
+            score
+        };
+
+        // Optimistic update
+        const optimistic: Foundation = {
+            id: 'temp-' + Date.now(),
+            created_at: new Date().toISOString(),
+            ...foundationData
+        } as Foundation;
+
+        setFoundations(prev => {
+            const idx = prev.findIndex(f => f.date === date);
+            if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = { ...next[idx], ...foundationData };
+                return next;
+            }
+            return [optimistic, ...prev];
+        });
 
         try {
-            // Check for existing record
-            const { data: existing } = await supabase
+            const { data: result, error } = await supabase
                 .from('foundations')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('date', date)
-                .maybeSingle();
+                .upsert(foundationData)
+                .select()
+                .single();
 
-            let result: Foundation;
+            if (error) throw error;
 
-            if (existing) {
-                const { data: updated, error } = await supabase
-                    .from('foundations')
-                    .update({ completed_principles: completed, notes, score })
-                    .eq('id', existing.id)
-                    .select()
-                    .single();
-                if (error) throw error;
-                result = updated as Foundation;
-            } else {
-                const { data: inserted, error } = await supabase
-                    .from('foundations')
-                    .insert({ user_id: userId, date, completed_principles: completed, notes, score })
-                    .select()
-                    .single();
-                if (error) throw error;
-                result = inserted as Foundation;
-            }
-
-            // Optimistic local update
-            setFoundations(prev => {
-                const idx = prev.findIndex(f => f.date === date);
-                if (idx >= 0) {
-                    const next = [...prev];
-                    next[idx] = result;
-                    return next;
-                }
-                return [result, ...prev];
-            });
-
-            return result;
+            const saved = result as Foundation;
+            setFoundations(prev => prev.map(f => f.date === date ? saved : f));
+            return saved;
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to save foundation');
-            return null;
+            console.warn('Online saveFoundation failed, queuing offline mutation');
+            OfflineManager.getInstance().queueMutation('foundations', 'UPSERT', foundationData);
+            return optimistic;
         }
     }, [supabase, userId]);
 

@@ -36,6 +36,8 @@ export interface UseSugarLogsResult {
  *
  * Works in React DOM (web) and React Native (mobile).
  */
+import { OfflineManager } from '@repo/lib';
+
 export function useSugarLogs(
     supabase: SupabaseClient,
     userId: string | undefined,
@@ -46,14 +48,21 @@ export function useSugarLogs(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `sugar_logs_${options.date || 'all'}`;
+
+        if (loading) {
+            const cached = await offline.getCached<SugarLog[]>(cacheKey);
+            if (cached) {
+                setSugarLogs(cached);
+                setLoading(false);
+            }
+        }
+
         if (!userId) {
-            setSugarLogs([]);
             setLoading(false);
             return;
         }
-
-        setLoading(true);
-        setError(null);
 
         try {
             let query = supabase
@@ -74,13 +83,18 @@ export function useSugarLogs(
 
             const { data, error: fetchError } = await query;
             if (fetchError) throw fetchError;
-            setSugarLogs((data as SugarLog[]) || []);
+
+            const fetched = (data as SugarLog[]) || [];
+            setSugarLogs(fetched);
+
+            offline.setCache(cacheKey, fetched);
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch sugar logs');
         } finally {
             setLoading(false);
         }
-    }, [userId, options.date, options.startDate, options.endDate]);
+    }, [userId, options.date, options.startDate, options.endDate, loading]);
 
     useEffect(() => {
         refresh();
@@ -90,27 +104,34 @@ export function useSugarLogs(
         if (!userId) return null;
 
         const today = new Date().toISOString().split('T')[0];
+        const logData = { user_id: userId, date: today, ...data };
+
+        // Optimistic object
+        const optimistic: SugarLog = {
+            id: 'temp-' + Date.now(),
+            created_at: new Date().toISOString(),
+            ...logData
+        } as SugarLog;
+
+        setSugarLogs(prev => [optimistic, ...prev]);
 
         try {
             const { data: inserted, error: insertError } = await supabase
                 .from('sugar_logs')
-                .insert({
-                    user_id: userId,
-                    date: today,
-                    ...data,
-                })
+                .insert(logData)
                 .select()
                 .single();
 
             if (insertError) throw insertError;
 
             const newLog = inserted as SugarLog;
-            // Optimistic prepend
-            setSugarLogs(prev => [newLog, ...prev]);
+            // Replace temp with real
+            setSugarLogs(prev => prev.map(l => l.id === optimistic.id ? newLog : l));
             return newLog;
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to log sugar event');
-            return null;
+            console.warn('Online logSugar failed, queuing offline mutation');
+            OfflineManager.getInstance().queueMutation('sugar_logs', 'INSERT', logData);
+            return optimistic;
         }
     }, [supabase, userId]);
 

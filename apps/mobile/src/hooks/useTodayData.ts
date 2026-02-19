@@ -14,7 +14,7 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDailyStats } from '@repo/hooks';
-import { SyncManager } from '@repo/lib';
+import { SyncManager, OfflineManager } from '@repo/lib';
 import { saveWorkout } from '@repo/lib';
 
 export function useTodayData(userId?: string) {
@@ -68,11 +68,12 @@ export function useTodayData(userId?: string) {
      * Updates UI immediately (optimistic), then syncs via shared service.
      * On failure, re-fetches to revert to server truth.
      */
+
+    // ...
+
     const logAction = useCallback(async (type: 'workout' | 'meal' | 'water' | 'craving') => {
         if (!userId) return;
 
-        // Optimistic stat bump — the score preview updates via score re-calc after refresh
-        // We don't mutate score optimistically since it requires re-running the analytics engine
         try {
             if (type === 'workout') {
                 await saveWorkout(supabase, userId, {
@@ -90,8 +91,25 @@ export function useTodayData(userId?: string) {
             // After write, refresh to get real count + score
             await refresh();
         } catch (e) {
-            console.error('[useTodayData] logAction failed:', e);
-            await refresh(); // revert to server truth
+            console.warn('[useTodayData] logAction failed, queuing offline:', e);
+            const offline = OfflineManager.getInstance();
+
+            if (type === 'workout') {
+                offline.queueMutation('workouts', 'UPSERT', {
+                    user_id: userId,
+                    date: today,
+                    morning_hiit_completed: true
+                });
+            } else if (type === 'water') {
+                offline.queueMutation('meals', 'INSERT', {
+                    user_id: userId,
+                    date: today,
+                    green_tea_cups: 1,
+                    quality: 'healthy'
+                });
+            }
+
+            await refresh(); // Load from cache or update state
         }
     }, [userId, today, refresh]);
 

@@ -19,6 +19,8 @@ export interface UseUserProfileResult {
  * @example
  * const { profile, updateProfile } = useUserProfile(supabase, userId);
  */
+import { OfflineManager } from '@repo/lib';
+
 export function useUserProfile(
     supabase: SupabaseClient,
     userId: string | undefined
@@ -28,14 +30,22 @@ export function useUserProfile(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `user_profile`;
+
+        if (loading) {
+            const cached = await offline.getCached<UserProfile>(cacheKey);
+            if (cached) {
+                setProfile(cached);
+                setLoading(false);
+            }
+        }
+
         if (!userId) {
             setProfile(null);
             setLoading(false);
             return;
         }
-
-        setLoading(true);
-        setError(null);
 
         try {
             const { data, error: fetchError } = await supabase
@@ -45,13 +55,18 @@ export function useUserProfile(
                 .single();
 
             if (fetchError) throw fetchError;
-            setProfile(data as UserProfile);
+
+            const fetchedProfile = data as UserProfile;
+            setProfile(fetchedProfile);
+
+            offline.setCache(cacheKey, fetchedProfile);
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch profile');
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [userId, loading]);
 
     useEffect(() => {
         refresh();
@@ -59,6 +74,10 @@ export function useUserProfile(
 
     const updateProfile = useCallback(async (updates: Partial<UserProfile>): Promise<UserProfile | null> => {
         if (!userId) return null;
+
+        // Optimistic update
+        const optimistic = { ...profile, ...updates } as UserProfile;
+        setProfile(optimistic);
 
         try {
             const { data, error: updateError } = await supabase
@@ -72,12 +91,18 @@ export function useUserProfile(
 
             const updated = data as UserProfile;
             setProfile(updated);
+
+            OfflineManager.getInstance().setCache(`user_profile`, updated);
+
             return updated;
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to update profile');
-            return null;
+            console.warn('Online updateProfile failed, queuing offline mutation');
+            OfflineManager.getInstance().queueMutation('profiles', 'UPDATE', { id: userId, ...updates });
+            // Cache the optimistic version so next reload shows it
+            OfflineManager.getInstance().setCache(`user_profile`, optimistic);
+            return optimistic;
         }
-    }, [supabase, userId]);
+    }, [supabase, userId, profile]);
 
     return { profile, loading, error, refresh, updateProfile };
 }

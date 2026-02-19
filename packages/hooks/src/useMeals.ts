@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { MealLog } from '@repo/types';
 import { validateMealInput, CreateMealInput } from '@repo/shared';
+import { OfflineManager } from '@repo/lib';
 
 export interface UseMealsOptions {
     date?: string;
@@ -35,8 +36,19 @@ export function useMeals(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `meals_${options.date || 'all'}`;
+
+        // 1. Load from cache
+        if (loading) {
+            const cached = await offline.getCached<MealLog[]>(cacheKey);
+            if (cached) {
+                setMeals(cached);
+                setLoading(false);
+            }
+        }
+
         if (!userId) {
-            setMeals([]);
             setLoading(false);
             return;
         }
@@ -63,13 +75,19 @@ export function useMeals(
 
             const { data, error: fetchError } = await query;
             if (fetchError) throw fetchError;
-            setMeals((data as MealLog[]) || []);
+
+            const fetchedMeals = (data as MealLog[]) || [];
+            setMeals(fetchedMeals);
+
+            // Update cache
+            offline.setCache(cacheKey, fetchedMeals);
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch meals');
         } finally {
             setLoading(false);
         }
-    }, [userId, options.date, options.startDate, options.endDate]);
+    }, [userId, options.date, options.startDate, options.endDate, loading]);
 
     useEffect(() => {
         refresh();
@@ -81,50 +99,47 @@ export function useMeals(
         const today = new Date().toISOString().split('T')[0];
         const normalized = validateMealInput({ date: today, ...data });
 
-        try {
-            // Check for existing entry today (upsert pattern)
-            const { data: existing } = await supabase
-                .from('meals')
-                .select('id')
-                .eq('user_id', userId)
-                .eq('date', normalized.date ?? today)
-                .maybeSingle();
+        // Optimistic object
+        const optimistic: MealLog = {
+            id: 'temp-' + Date.now(),
+            user_id: userId,
+            created_at: new Date().toISOString(),
+            date: normalized.date || today,
+            green_tea_cups: normalized.green_tea_cups || 0,
+            quality: normalized.quality || 'moderate',
+            description: normalized.description || ''
+        };
 
-            let result;
-            if (existing) {
-                const { data: updated, error } = await supabase
-                    .from('meals')
-                    .update(normalized)
-                    .eq('id', existing.id)
-                    .select()
-                    .single();
-                if (error) throw error;
-                result = updated as MealLog;
-            } else {
-                const { data: inserted, error } = await supabase
-                    .from('meals')
-                    .insert({ user_id: userId, ...normalized })
-                    .select()
-                    .single();
-                if (error) throw error;
-                result = inserted as MealLog;
+        // Update local state primarily by finding today's entry and merging
+        setMeals(prev => {
+            const idx = prev.findIndex(m => m.date === (normalized.date || today));
+            if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = { ...next[idx], ...normalized };
+                return next;
             }
+            return [optimistic, ...prev];
+        });
 
-            // Optimistic local update
-            setMeals(prev => {
-                const idx = prev.findIndex(m => m.id === result.id);
-                if (idx >= 0) {
-                    const next = [...prev];
-                    next[idx] = result;
-                    return next;
-                }
-                return [result, ...prev];
-            });
+        try {
+            // Use straightforward UPSERT which covers both Insert and Update for offline simplicity
+            // This assumes Supabase table has 'user_id, date' unique constraint logic/policy
+            const { data: result, error } = await supabase
+                .from('meals')
+                .upsert({ user_id: userId, ...normalized })
+                .select()
+                .single();
 
-            return result;
+            if (error) throw error;
+
+            const saved = result as MealLog;
+            setMeals(prev => prev.map(m => m.date === saved.date ? saved : m));
+            return saved;
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to log meal');
-            return null;
+            console.warn('Online logMeal failed, queuing offline mutation');
+            // Queue UPSERT
+            OfflineManager.getInstance().queueMutation('meals', 'UPSERT', { user_id: userId, ...normalized });
+            return optimistic;
         }
     }, [supabase, userId]);
 

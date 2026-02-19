@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { WorkoutLog, MealLog, SugarLog, DailyScore } from '@repo/types';
 import { Foundation } from '@repo/shared';
 import { calculateDailyScore, calculateStreak } from '@repo/analytics';
+import { OfflineManager } from '@repo/lib';
 
 export interface UseDailyStatsResult {
     workouts: WorkoutLog[];
@@ -47,13 +48,30 @@ export function useDailyStats(
     const [error, setError] = useState<string | null>(null);
 
     const refresh = useCallback(async () => {
+        const offline = OfflineManager.getInstance();
+        const cacheKey = `daily_stats_${targetDate}`;
+
+        // 1. Load from cache immediately
+        if (loading) { // Only check cache on initial load to avoid flickering
+            const cached = await offline.getCached<any>(cacheKey);
+            if (cached) {
+                setWorkouts(cached.workouts || []);
+                setMeals(cached.meals || []);
+                setSugarLogs(cached.sugarLogs || []);
+                setFoundation(cached.foundation || null);
+                setScore(cached.score || null);
+                setStreak(cached.streak || 0);
+                setLoading(false); // Show cached content
+            }
+        }
+
         if (!userId) {
             setLoading(false);
             return;
         }
 
-        setLoading(true);
-        setError(null);
+        // Keep loading true if no cache was found
+        // If cache found, we are already showing data, just background updating
 
         try {
             const [workoutsRes, mealsRes, sugarRes, foundationRes] = await Promise.all([
@@ -77,18 +95,32 @@ export function useDailyStats(
             const dailyScore = calculateDailyScore(workoutData, mealData, sugarData, foundationData);
             setScore(dailyScore);
 
+            let calculatedStreak = 0;
             // Streak from history if provided, otherwise just today's pass/fail
             if (scoreHistory && scoreHistory.length > 0) {
-                setStreak(calculateStreak(scoreHistory));
+                calculatedStreak = calculateStreak(scoreHistory);
             } else {
-                setStreak(dailyScore.score >= 60 ? 1 : 0);
+                calculatedStreak = dailyScore.score >= 60 ? 1 : 0;
             }
+            setStreak(calculatedStreak);
+
+            // Update cache
+            offline.setCache(cacheKey, {
+                workouts: workoutData,
+                meals: mealData,
+                sugarLogs: sugarData,
+                foundation: foundationData,
+                score: dailyScore,
+                streak: calculatedStreak
+            });
+
         } catch (e: any) {
+            console.error('Fetch failed, using cache if available', e);
             setError(e?.message ?? 'Failed to fetch daily stats');
         } finally {
             setLoading(false);
         }
-    }, [userId, targetDate]);
+    }, [userId, targetDate, loading]); // Added loading dependency to allow cache check once
 
     useEffect(() => {
         refresh();
