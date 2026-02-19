@@ -5,7 +5,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
-import { useTheme } from '@repo/ui';
+import { useTheme, EmptyState, SectionHeader } from '@repo/ui';
 import { generateRecommendations } from '@repo/lib';
 import { Recommendation } from '@repo/shared';
 import { Ionicons } from '@expo/vector-icons';
@@ -153,7 +153,12 @@ export default function InsightsScreen() {
                 </Animated.View>
 
                 {/* Recommendations */}
-                <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Smart Recommendations</Text>
+                <SectionHeader
+                    title="Smart Recommendations"
+                    color={theme.colors.text}
+                    subtitleColor={theme.colors.textSecondary}
+                    style={{ marginBottom: 14 }}
+                />
 
                 {loadingRecs ? (
                     <>
@@ -162,13 +167,13 @@ export default function InsightsScreen() {
                         <Skeleton width="100%" height={90} borderRadius={24} />
                     </>
                 ) : recommendations.length === 0 ? (
-                    <Animated.View style={[st.emptyCard, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
-                        <Ionicons name="analytics-outline" size={40} color={theme.colors.textMuted} style={{ marginBottom: 12 }} />
-                        <Text style={[st.emptyTitle, { color: theme.colors.text }]}>Building your insights</Text>
-                        <Text style={[st.emptyText, { color: theme.colors.textSecondary }]}>
-                            Keep logging your data. Personalized recommendations appear after a few days.
-                        </Text>
-                    </Animated.View>
+                    <EmptyState
+                        icon={<Ionicons name="analytics-outline" size={44} color={theme.colors.textMuted} />}
+                        title="Building your insights"
+                        description="Keep logging your data. Personalised recommendations appear after a few days."
+                        color={theme.colors.text}
+                        descriptionColor={theme.colors.textSecondary}
+                    />
                 ) : (
                     recommendations.map((rec, i) => (
                         <RecCard key={rec.id} rec={rec} theme={theme} isDark={isDark} delay={i * 80} />

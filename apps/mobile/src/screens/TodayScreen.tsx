@@ -3,67 +3,21 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthProvider';
 import { StatusBar } from 'expo-status-bar';
-import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTodayData } from '../hooks/useTodayData';
-import { HapticButton, Card, Skeleton } from '../components/ui';
+import { HapticButton, Skeleton } from '../components/ui';
+import { useTheme, Card, ProgressRing, SectionHeader } from '@repo/ui';
 import Animated, {
     useSharedValue,
     withTiming,
     withSpring,
     withDelay,
-    useAnimatedProps,
     useAnimatedStyle,
     Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useTheme } from '@repo/ui';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// ─── Consistency Ring ─────────────────────────────────────────────────────────
-const ConsistencyRing = ({ score, theme }: { score: number; theme: any }) => {
-    const R = 80;
-    const SW = 15;
-    const circumference = 2 * Math.PI * R;
-    const progress = useSharedValue(0);
-
-    useEffect(() => {
-        progress.value = withDelay(300, withTiming(score / 100, { duration: 1500 }));
-    }, [score]);
-
-    const animatedProps = useAnimatedProps(() => ({
-        strokeDashoffset: circumference - progress.value * circumference,
-    }));
-
-    const size = R * 2 + SW;
-    return (
-        <View style={st.ringWrap}>
-            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                <G rotation="-90" origin={`${R + SW / 2}, ${R + SW / 2}`}>
-                    <Circle
-                        cx={R + SW / 2} cy={R + SW / 2} r={R}
-                        stroke={theme.colors.border}
-                        strokeWidth={SW} fill="transparent"
-                    />
-                    <AnimatedCircle
-                        cx={R + SW / 2} cy={R + SW / 2} r={R}
-                        stroke={theme.colors.primary}
-                        strokeWidth={SW}
-                        strokeDasharray={circumference}
-                        animatedProps={animatedProps}
-                        strokeLinecap="round"
-                        fill="transparent"
-                    />
-                </G>
-            </Svg>
-            <View style={st.ringCenter}>
-                <Text style={[st.ringScore, { color: theme.colors.text }]}>{score}%</Text>
-                <Text style={[st.ringLabel, { color: theme.colors.textSecondary }]}>CONSISTENCY</Text>
-            </View>
-        </View>
-    );
-};
 
 // ─── Stat Card (mini token card, not the shared glass Card — smaller) ─────────
 const StatCard = ({ label, value, unit, icon, iconColor, theme, delay }: any) => {
@@ -210,9 +164,19 @@ export default function TodayScreen({ navigation }: any) {
                     </HapticButton>
                 </Animated.View>
 
-                {/* ── Hero card: Consistency Ring ─────────────────────── */}
+                {/* Hero card: ProgressRing */}
                 <Card delay={100} style={st.heroCard}>
-                    <ConsistencyRing score={score} theme={theme} />
+                    <ProgressRing
+                        score={score}
+                        color={theme.colors.primary}
+                        trackColor={theme.colors.border}
+                        delay={300}
+                        radius={80}
+                        strokeWidth={14}
+                    >
+                        <Text style={[st.ringScore, { color: theme.colors.text }]}>{score}%</Text>
+                        <Text style={[st.ringLabel, { color: theme.colors.textSecondary }]}>CONSISTENCY</Text>
+                    </ProgressRing>
                     <Text style={[st.heroSubtitle, { color: theme.colors.textSecondary }]}>
                         Today's Performance Score
                     </Text>
@@ -237,8 +201,13 @@ export default function TodayScreen({ navigation }: any) {
                     />
                 </View>
 
-                {/* ── Quick Logger ────────────────────────────────────── */}
-                <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Quick Logger</Text>
+                {/* Quick Logger */}
+                <SectionHeader
+                    title="Quick Logger"
+                    color={theme.colors.text}
+                    subtitleColor={theme.colors.textSecondary}
+                    style={{ marginBottom: 14 }}
+                />
                 <View style={st.actionGrid}>
                     <QuickAction
                         label="Log Workout" icon="barbell"
