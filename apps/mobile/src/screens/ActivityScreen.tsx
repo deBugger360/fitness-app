@@ -1,11 +1,11 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
 import { FOUNDATION_PRINCIPLES } from '@repo/shared';
+import { useFoundations } from '@repo/hooks';
 import Animated, {
     useSharedValue,
     withSpring,
@@ -32,7 +32,6 @@ const LUCIDE_TO_IONICONS: Record<string, string> = {
 // ─── Animated habit row ───────────────────────────────────────────────────────
 const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
     const ionicon = LUCIDE_TO_IONICONS[principle.icon] || 'checkmark-circle-outline';
-
     const opacity = useSharedValue(0);
     const translateX = useSharedValue(-12);
     useEffect(() => {
@@ -61,11 +60,7 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
                         backgroundColor: isChecked ? theme.colors.primary : (theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)'),
                         borderColor: isChecked ? theme.colors.primary : theme.colors.border,
                     }]}>
-                        <Ionicons
-                            name={ionicon as any}
-                            size={20}
-                            color={isChecked ? '#fff' : theme.colors.textSecondary}
-                        />
+                        <Ionicons name={ionicon as any} size={20} color={isChecked ? '#fff' : theme.colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.habitLabel, {
@@ -79,7 +74,6 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
                         </Text>
                     </View>
                 </View>
-
                 <View style={[styles.checkbox, {
                     backgroundColor: isChecked ? theme.colors.success : 'transparent',
                     borderColor: isChecked ? theme.colors.success : theme.colors.border,
@@ -91,7 +85,7 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
     );
 };
 
-// ─── Progress bar component ───────────────────────────────────────────────────────
+// ─── Animated progress bar ────────────────────────────────────────────────────
 const ProgressBar = ({ progress, theme }: { progress: number; theme: any }) => {
     const width = useSharedValue(0);
     useEffect(() => {
@@ -105,14 +99,36 @@ const ProgressBar = ({ progress, theme }: { progress: number; theme: any }) => {
     );
 };
 
+// ─── Error banner ─────────────────────────────────────────────────────────────
+const ErrorBanner = ({ message, theme }: { message: string; theme: any }) => (
+    <View style={[styles.errorBanner, { backgroundColor: theme.colors.errorLight, borderColor: theme.colors.error }]}>
+        <Ionicons name="alert-circle-outline" size={16} color={theme.colors.error} />
+        <Text style={[styles.errorText, { color: theme.colors.error }]}>{message}</Text>
+    </View>
+);
+
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function ActivityScreen() {
     const { user } = useAuth();
     const { theme, isDark } = useTheme();
-    const [habits, setHabits] = useState<Record<string, boolean>>({});
-    const [loading, setLoading] = useState(true);
     const today = new Date().toISOString().split('T')[0];
 
+    // ── Shared hook — same as web ──────────────────────────────────────────
+    const { foundations, today: todayFoundation, loading, error, saveFoundation } = useFoundations(
+        supabase,
+        user?.id,
+        { date: today }
+    );
+
+    // Derive checked habits from the saved `notes` field (keyed by principle ID)
+    const habits: Record<string, boolean> = Object.fromEntries(
+        FOUNDATION_PRINCIPLES.map(p => [
+            p.id,
+            todayFoundation?.notes?.[p.id] === true || todayFoundation?.notes?.[p.id] === 'true',
+        ])
+    );
+
+    // Header entrance animation
     const headerOpacity = useSharedValue(0);
     const headerY = useSharedValue(-20);
     useEffect(() => {
@@ -124,33 +140,16 @@ export default function ActivityScreen() {
         transform: [{ translateY: headerY.value }],
     }));
 
-    useEffect(() => { fetchHabits(); }, [user?.id]);
-
-    const fetchHabits = async () => {
-        if (!user?.id) return;
-        setLoading(true);
-        try {
-            const { data } = await supabase
-                .from('foundations')
-                .select('notes')
-                .eq('user_id', user.id)
-                .eq('date', today)
-                .single();
-            setHabits(data?.notes || {});
-        } catch { /* first log of the day — no record yet */ }
-        finally { setLoading(false); }
-    };
-
+    // ── Toggle habit — optimistic via saveFoundation ────────────────────────
     const toggleHabit = async (habitId: string) => {
-        if (!user?.id) return;
-        const newHabits = { ...habits, [habitId]: !habits[habitId] };
-        setHabits(newHabits);
-        try {
-            const { error } = await supabase
-                .from('foundations')
-                .upsert({ user_id: user.id, date: today, notes: newHabits }, { onConflict: 'user_id, date' });
-            if (error) throw error;
-        } catch { setHabits(habits); }
+        const currentChecked = !!habits[habitId];
+        const newNotes = { ...(todayFoundation?.notes || {}), [habitId]: !currentChecked };
+        const completedIds = FOUNDATION_PRINCIPLES
+            .map(p => p.id)
+            .filter(id => (id === habitId ? !currentChecked : !!newNotes[id]));
+
+        // saveFoundation in @repo/hooks handles optimistic local update + upsert
+        await saveFoundation(today, completedIds, newNotes);
     };
 
     const completedCount = Object.values(habits).filter(Boolean).length;
@@ -169,9 +168,16 @@ export default function ActivityScreen() {
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </Text>
                 </View>
+                {/* Sync indicator — shows loading state without blocking UI */}
+                {loading && (
+                    <View style={[styles.syncDot, { backgroundColor: theme.colors.primary }]} />
+                )}
             </Animated.View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+                {error && <ErrorBanner message={error} theme={theme} />}
+
                 {/* Progress summary card */}
                 <Animated.View style={[styles.progressCard, { backgroundColor: bgColor, borderColor }]}>
                     <View style={styles.progressHeader}>
@@ -218,12 +224,18 @@ export default function ActivityScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 20 },
+    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
     date: { fontSize: 14, fontWeight: '600', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+    syncDot: { width: 8, height: 8, borderRadius: 4, marginTop: 8, opacity: 0.7 },
     content: { paddingHorizontal: 24, paddingBottom: 48 },
 
-    // Progress card
+    errorBanner: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 16,
+    },
+    errorText: { fontSize: 13, flex: 1 },
+
     progressCard: {
         borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 16,
         shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
@@ -236,7 +248,6 @@ const styles = StyleSheet.create({
     progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
     progressFill: { height: 6, borderRadius: 3 },
 
-    // Habits card
     habitsCard: {
         borderRadius: 32, borderWidth: 1, padding: 8,
         shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,

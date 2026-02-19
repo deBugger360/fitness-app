@@ -28,3 +28,6 @@ export type { UseDailyStatsResult } from './useDailyStats';
 
 export { useDateRangeData } from './useDateRangeData';
 export type { UseDateRangeDataResult } from './useDateRangeData';
+
+export { useRecommendations } from './useRecommendations';
+export type { UseRecommendationsResult } from './useRecommendations';

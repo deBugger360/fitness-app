@@ -1,11 +1,11 @@
-
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
-import { validateMealInput } from '@repo/shared';
+import { useMeals } from '@repo/hooks';
 import { HapticButton } from '../components/ui';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, {
     useSharedValue,
     withSpring,
@@ -24,89 +24,146 @@ const QUALITY_CONFIG: Record<Quality, { label: string; icon: string; color: stri
     unhealthy: { label: 'Unhealthy', icon: 'fast-food', color: '#ef4444' },
 };
 
-export default function MealsScreen() {
-    const { user } = useAuth();
-    const { theme, isDark } = useTheme();
-    const [log, setLog] = useState('');
-    const [quality, setQuality] = useState<Quality>('moderate');
-    const [saving, setSaving] = useState(false);
-    const [history, setHistory] = useState<any[]>([]);
+// ─── Animated history item ────────────────────────────────────────────────────
+const HistoryItem = ({ item, theme, delay, isDark }: any) => {
+    const cfg = QUALITY_CONFIG[item.quality as Quality] || QUALITY_CONFIG.moderate;
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(8);
 
-    const today = new Date().toISOString().split('T')[0];
+    useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 350 }));
+        translateY.value = withDelay(delay, withSpring(0, { damping: 20 }));
+    }, []);
+
+    const anim = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        transform: [{ translateY: translateY.value }],
+    }));
 
     const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
     const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
-    const inputBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)';
 
-    // Header entrance
+    return (
+        <Animated.View style={[st.historyItem, { backgroundColor: bgGlass, borderColor: borderGlass }, anim]}>
+            <View style={[st.qualityDot, { backgroundColor: cfg.color + '20', borderRadius: 10 }]}>
+                <Ionicons name={cfg.icon as any} size={16} color={cfg.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={[st.historyText, { color: theme.colors.text }]} numberOfLines={1}>
+                    {item.description || 'Meal logged'}
+                </Text>
+                <Text style={[st.historyMeta, { color: theme.colors.textMuted }]}>
+                    {cfg.label} · {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+            </View>
+        </Animated.View>
+    );
+};
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+export default function MealsScreen() {
+    const { user } = useAuth();
+    const { theme, isDark } = useTheme();
+    const today = new Date().toISOString().split('T')[0];
+
+    const [description, setDescription] = React.useState('');
+    const [quality, setQuality] = React.useState<Quality>('moderate');
+    const [saving, setSaving] = React.useState(false);
+
+    // ── Shared hook — same as web ──────────────────────────────────────────
+    const { meals, loading, error, refresh, logMeal } = useMeals(
+        supabase,
+        user?.id,
+        { date: today }
+    );
+
+    // Re-fetch on tab focus
+    useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+    // Header animation
     const headerOpacity = useSharedValue(0);
     const headerY = useSharedValue(-20);
     useEffect(() => {
         headerOpacity.value = withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) });
         headerY.value = withSpring(0, { damping: 20, stiffness: 100 });
-        fetchHistory();
-    }, [user?.id]);
+    }, []);
     const headerAnim = useAnimatedStyle(() => ({
         opacity: headerOpacity.value,
         transform: [{ translateY: headerY.value }],
     }));
 
-    const fetchHistory = async () => {
-        if (!user?.id) return;
-        const { data } = await supabase
-            .from('meals')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('date', today)
-            .order('created_at', { ascending: false });
-        if (data) setHistory(data);
-    };
-
+    // ── Submit ─────────────────────────────────────────────────────────────
     const submitLog = async () => {
-        if (!log.trim() || !user?.id) return;
+        if (!description.trim()) return;
         setSaving(true);
         try {
-            const mealData = validateMealInput({ date: today, quality, description: log, green_tea_cups: 0 });
-            const { error } = await supabase.from('meals').insert({ user_id: user.id, ...mealData });
-            if (error) throw error;
-            setLog('');
-            await fetchHistory();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch (e: any) {
-            Alert.alert('Error', e.message);
+            const result = await logMeal({
+                date: today,
+                quality,
+                description,
+                green_tea_cups: 0,
+            });
+            if (result) {
+                setDescription('');
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else if (error) {
+                Alert.alert('Error', error);
+            }
         } finally {
             setSaving(false);
         }
     };
 
+    const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+    const inputBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.03)';
+
+    // Today's logged meals (non-water entries)
+    const todayMeals = meals.filter(m => m.description);
+
     return (
         <View style={[st.container, { backgroundColor: theme.colors.background }]}>
-            {/* ── Header ─────────────────────────────────── */}
+            {/* Header */}
             <Animated.View style={[st.header, headerAnim]}>
-                <Text style={[st.title, { color: theme.colors.text }]}>Meals</Text>
-                <Text style={[st.subtitle, { color: theme.colors.textSecondary }]}>Track your nutrition</Text>
+                <View>
+                    <Text style={[st.title, { color: theme.colors.text }]}>Meals</Text>
+                    <Text style={[st.subtitle, { color: theme.colors.textSecondary }]}>Track your nutrition</Text>
+                </View>
+                {loading && <View style={[st.syncDot, { backgroundColor: theme.colors.primary }]} />}
             </Animated.View>
 
-            <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={st.content}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={loading}
+                        onRefresh={refresh}
+                        tintColor={theme.colors.primary}
+                    />
+                }
+            >
+                {/* Error banner */}
+                {error && (
+                    <View style={[st.errorBanner, { backgroundColor: theme.colors.errorLight, borderColor: theme.colors.error }]}>
+                        <Ionicons name="alert-circle-outline" size={15} color={theme.colors.error} />
+                        <Text style={[st.errorText, { color: theme.colors.error }]}>{error}</Text>
+                    </View>
+                )}
 
-                {/* ── Input card ─────────────────────────── */}
+                {/* Input card */}
                 <Animated.View style={[st.card, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
                     <Text style={[st.label, { color: theme.colors.textSecondary }]}>What did you eat?</Text>
                     <TextInput
-                        style={[st.input, {
-                            backgroundColor: inputBg,
-                            borderColor: borderGlass,
-                            color: theme.colors.text,
-                        }]}
+                        style={[st.input, { backgroundColor: inputBg, borderColor: borderGlass, color: theme.colors.text }]}
                         placeholder="e.g. Grilled chicken salad with avocado..."
                         placeholderTextColor={theme.colors.textMuted}
-                        value={log}
-                        onChangeText={setLog}
+                        value={description}
+                        onChangeText={setDescription}
                         multiline
                         numberOfLines={3}
                     />
 
-                    {/* Quality selector */}
                     <Text style={[st.label, { color: theme.colors.textSecondary }]}>Meal quality</Text>
                     <View style={st.qualityRow}>
                         {(Object.keys(QUALITY_CONFIG) as Quality[]).map((q) => {
@@ -122,11 +179,7 @@ export default function MealsScreen() {
                                     onPress={() => setQuality(q)}
                                     hapticType={Haptics.ImpactFeedbackStyle.Light}
                                 >
-                                    <Ionicons
-                                        name={cfg.icon as any}
-                                        size={16}
-                                        color={active ? '#fff' : theme.colors.textSecondary}
-                                    />
+                                    <Ionicons name={cfg.icon as any} size={16} color={active ? '#fff' : theme.colors.textSecondary} />
                                     <Text style={[st.qualityText, { color: active ? '#fff' : theme.colors.textSecondary }]}>
                                         {cfg.label}
                                     </Text>
@@ -135,12 +188,8 @@ export default function MealsScreen() {
                         })}
                     </View>
 
-                    {/* Submit */}
                     <HapticButton
-                        style={[st.submitBtn, {
-                            backgroundColor: theme.colors.primary,
-                            opacity: saving ? 0.7 : 1,
-                        }]}
+                        style={[st.submitBtn, { backgroundColor: theme.colors.primary, opacity: saving ? 0.7 : 1 }]}
                         onPress={submitLog}
                         hapticType={Haptics.ImpactFeedbackStyle.Medium}
                     >
@@ -149,44 +198,21 @@ export default function MealsScreen() {
                     </HapticButton>
                 </Animated.View>
 
-                {/* ── Today's log ────────────────────────── */}
-                {history.length > 0 && (
+                {/* Today's log */}
+                {todayMeals.length > 0 && (
                     <>
                         <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Today's Log</Text>
-                        {history.map((item, i) => {
-                            const cfg = QUALITY_CONFIG[item.quality as Quality] || QUALITY_CONFIG.moderate;
-                            const itemOpacity = useSharedValue(0);
-                            const itemY = useSharedValue(8);
-                            useEffect(() => {
-                                itemOpacity.value = withDelay(i * 60, withTiming(1, { duration: 350 }));
-                                itemY.value = withDelay(i * 60, withSpring(0, { damping: 20 }));
-                            }, []);
-                            const itemAnim = useAnimatedStyle(() => ({
-                                opacity: itemOpacity.value,
-                                transform: [{ translateY: itemY.value }],
-                            }));
-                            return (
-                                <Animated.View
-                                    key={item.id || i}
-                                    style={[st.historyItem, { backgroundColor: bgGlass, borderColor: borderGlass }, itemAnim]}
-                                >
-                                    <View style={[st.qualityDot, { backgroundColor: cfg.color + '20', borderRadius: 10 }]}>
-                                        <Ionicons name={cfg.icon as any} size={16} color={cfg.color} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={[st.historyText, { color: theme.colors.text }]} numberOfLines={1}>
-                                            {item.description}
-                                        </Text>
-                                        <Text style={[st.historyMeta, { color: theme.colors.textMuted }]}>
-                                            {cfg.label} · {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Text>
-                                    </View>
-                                </Animated.View>
-                            );
-                        })}
+                        {todayMeals.map((item, i) => (
+                            <HistoryItem
+                                key={item.id || i}
+                                item={item}
+                                theme={theme}
+                                isDark={isDark}
+                                delay={i * 60}
+                            />
+                        ))}
                     </>
                 )}
-
             </ScrollView>
         </View>
     );
@@ -194,12 +220,18 @@ export default function MealsScreen() {
 
 const st = StyleSheet.create({
     container: { flex: 1 },
-    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 8 },
+    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
     subtitle: { fontSize: 15, fontWeight: '500', marginTop: 4 },
+    syncDot: { width: 8, height: 8, borderRadius: 4, marginTop: 10, opacity: 0.7 },
     content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 48 },
 
-    // Card
+    errorBanner: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 16,
+    },
+    errorText: { fontSize: 13, flex: 1 },
+
     card: {
         borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 28,
         shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
@@ -209,23 +241,18 @@ const st = StyleSheet.create({
         borderRadius: 20, borderWidth: 1, padding: 16,
         fontSize: 16, minHeight: 90, textAlignVertical: 'top', marginBottom: 20,
     },
-
-    // Quality
     qualityRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
     qualityBtn: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         gap: 6, paddingVertical: 12, borderRadius: 16, borderWidth: 1,
     },
     qualityText: { fontSize: 12, fontWeight: '700' },
-
-    // Submit
     submitBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         gap: 10, paddingVertical: 16, borderRadius: 20,
     },
     submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-    // History
     sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 14 },
     historyItem: {
         flexDirection: 'row', alignItems: 'center', gap: 14,

@@ -1,12 +1,10 @@
-
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, ScrollView, RefreshControl } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { useAuth } from '../context/AuthProvider';
-import { supabase } from '../context/AuthProvider';
+import { useAuth, supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme, EmptyState, SectionHeader } from '@repo/ui';
-import { generateRecommendations } from '@repo/lib';
+import { useRecommendations } from '@repo/hooks';
 import { Recommendation } from '@repo/shared';
 import { Ionicons } from '@expo/vector-icons';
 import { Skeleton } from '../components/ui';
@@ -18,6 +16,7 @@ import Animated, {
     useAnimatedStyle,
     Easing,
 } from 'react-native-reanimated';
+import { SyncManager } from '@repo/lib';
 
 const { width } = Dimensions.get('window');
 
@@ -41,7 +40,7 @@ const RecCard = ({ rec, theme, delay, isDark }: any) => {
     const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
     const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
 
-    React.useEffect(() => {
+    useEffect(() => {
         opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
         translateY.value = withDelay(delay, withSpring(0, { damping: 20, stiffness: 120 }));
     }, []);
@@ -72,12 +71,17 @@ const RecCard = ({ rec, theme, delay, isDark }: any) => {
 export default function InsightsScreen() {
     const { user } = useAuth();
     const { theme, isDark } = useTheme();
-    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-    const [loadingRecs, setLoadingRecs] = useState(false);
 
+    // ── Shared hook — same as web ──────────────────────────────────────────
+    const { recommendations, loading, error, refresh } = useRecommendations(supabase, user?.id);
+
+    // Re-fetch on tab focus
+    useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+    // Header animation
     const headerOpacity = useSharedValue(0);
     const headerY = useSharedValue(-20);
-    React.useEffect(() => {
+    useEffect(() => {
         headerOpacity.value = withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) });
         headerY.value = withSpring(0, { damping: 20, stiffness: 100 });
     }, []);
@@ -85,18 +89,6 @@ export default function InsightsScreen() {
         opacity: headerOpacity.value,
         transform: [{ translateY: headerY.value }],
     }));
-
-    const fetchRecommendations = useCallback(async () => {
-        if (!user?.id) return;
-        setLoadingRecs(true);
-        try {
-            const recs = await generateRecommendations(supabase, user.id);
-            setRecommendations(recs);
-        } catch (e) { console.error(e); }
-        finally { setLoadingRecs(false); }
-    }, [user?.id]);
-
-    useFocusEffect(useCallback(() => { fetchRecommendations(); }, [fetchRecommendations]));
 
     const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
     const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
@@ -108,8 +100,13 @@ export default function InsightsScreen() {
                 <Text style={[st.subtitle, { color: theme.colors.textSecondary }]}>Your progress this week</Text>
             </Animated.View>
 
-            <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
-
+            <ScrollView
+                contentContainerStyle={st.content}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={theme.colors.text} />
+                }
+            >
                 {/* Chart card */}
                 <Animated.View style={[st.chartCard, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
                     <Text style={[st.chartTitle, { color: theme.colors.text }]}>Consistency Trend</Text>
@@ -128,21 +125,14 @@ export default function InsightsScreen() {
                             backgroundColor: 'transparent',
                             backgroundGradientFrom: 'transparent',
                             backgroundGradientTo: 'transparent',
-                            backgroundGradientFromOpacity: 0,
-                            backgroundGradientToOpacity: 0,
                             decimalPlaces: 0,
                             color: (opacity = 1) => theme.colors.primary,
                             labelColor: () => theme.colors.textSecondary,
-                            style: { borderRadius: 16 },
                             propsForDots: {
                                 r: '5',
                                 strokeWidth: '2',
                                 stroke: theme.colors.primary,
                                 fill: isDark ? '#0f172a' : '#fff',
-                            },
-                            propsForBackgroundLines: {
-                                stroke: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
-                                strokeDasharray: '4',
                             },
                         }}
                         bezier
@@ -160,7 +150,7 @@ export default function InsightsScreen() {
                     style={{ marginBottom: 14 }}
                 />
 
-                {loadingRecs ? (
+                {loading ? (
                     <>
                         <Skeleton width="100%" height={90} borderRadius={24} style={{ marginBottom: 12 }} />
                         <Skeleton width="100%" height={90} borderRadius={24} style={{ marginBottom: 12 }} />
@@ -179,7 +169,6 @@ export default function InsightsScreen() {
                         <RecCard key={rec.id} rec={rec} theme={theme} isDark={isDark} delay={i * 80} />
                     ))
                 )}
-
             </ScrollView>
         </View>
     );
@@ -191,26 +180,10 @@ const st = StyleSheet.create({
     title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
     subtitle: { fontSize: 15, fontWeight: '500', marginTop: 4 },
     content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 48 },
-
-    // Chart
-    chartCard: {
-        borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 28,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
-        overflow: 'hidden',
-        alignItems: 'center',
-    },
+    chartCard: { borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 28, alignItems: 'center', overflow: 'hidden' },
     chartTitle: { fontSize: 18, fontWeight: '700', alignSelf: 'flex-start' },
     chartSub: { fontSize: 13, fontWeight: '500', alignSelf: 'flex-start', marginTop: 3, marginBottom: 4 },
-
-    // Section
-    sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 14 },
-
-    // Rec cards
-    recCard: {
-        flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-        borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 12,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
-    },
+    recCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 12 },
     priorityBadge: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     recBody: { flex: 1 },
     recHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
@@ -218,12 +191,4 @@ const st = StyleSheet.create({
     priorityTag: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
     priorityLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
     recMessage: { fontSize: 13, lineHeight: 20 },
-
-    // Empty
-    emptyCard: {
-        borderRadius: 32, borderWidth: 1, padding: 32, alignItems: 'center',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
-    },
-    emptyTitle: { fontSize: 17, fontWeight: '700', marginBottom: 8 },
-    emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });

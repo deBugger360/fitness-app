@@ -1,111 +1,90 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions, RefreshControl } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    Modal, Dimensions, RefreshControl,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
-import { SugarLog } from '@repo/types';
 import { getHighRiskHours } from '@repo/analytics';
-import Animated, { useSharedValue, withRepeat, withTiming, useAnimatedStyle, withSequence } from 'react-native-reanimated';
-import { HapticButton } from '../components/ui/HapticButton';
-import * as Haptics from 'expo-haptics';
+import { useSugarLogs } from '@repo/hooks';
 import { useTheme } from '@repo/ui';
+import { HapticButton } from '../components/ui/HapticButton';
+import Animated, {
+    useSharedValue,
+    withRepeat,
+    withTiming,
+    useAnimatedStyle,
+    withSequence,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
+const TRIGGERS = ['Stress', 'Boredom', 'Social', 'Habit', 'Hunger', 'Tired'];
+const MOODS = ['Anxious', 'Sad', 'Neutral', 'Happy', 'Excited'];
+
+// ─── Error banner ─────────────────────────────────────────────────────────────
+const ErrorBanner = ({ message, theme }: { message: string; theme: any }) => (
+    <View style={[bannerStyles.wrap, { backgroundColor: theme.colors.errorLight, borderColor: theme.colors.error }]}>
+        <Ionicons name="alert-circle-outline" size={15} color={theme.colors.error} />
+        <Text style={[bannerStyles.text, { color: theme.colors.error }]}>{message}</Text>
+    </View>
+);
+const bannerStyles = StyleSheet.create({
+    wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, margin: 16, marginBottom: 0 },
+    text: { fontSize: 13, flex: 1 },
+});
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 export default function SugarScreen() {
     const { user } = useAuth();
     const { theme } = useTheme();
-    const [streak, setStreak] = useState(0);
-    const [logs, setLogs] = useState<SugarLog[]>([]);
-    const [refreshing, setRefreshing] = useState(false);
 
-    // Shield Animation
+    // ── Shared hook — same as web ──────────────────────────────────────────
+    const { sugarLogs, loading, error, refresh, logSugar } = useSugarLogs(
+        supabase,
+        user?.id
+    );
+
+    // Re-fetch on tab focus
+    useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+    // ── Streak calculation (days since last intake) ────────────────────────
+    const streak = React.useMemo(() => {
+        const lastIntake = sugarLogs.find(l => l.type === 'intake');
+        if (!lastIntake) return sugarLogs.length > 0
+            ? Math.floor((Date.now() - new Date(sugarLogs[sugarLogs.length - 1].created_at!).getTime()) / 86_400_000)
+            : 0;
+        return Math.floor((Date.now() - new Date(lastIntake.created_at!).getTime()) / 86_400_000);
+    }, [sugarLogs]);
+
+    // ── Shield animation ───────────────────────────────────────────────────
     const shieldScale = useSharedValue(1);
     const shieldOpacity = useSharedValue(0.3);
 
-    // Logger Modal State
+    useFocusEffect(useCallback(() => {
+        shieldOpacity.value = withRepeat(withSequence(
+            withTiming(0.6, { duration: 1500 }),
+            withTiming(0.2, { duration: 1500 })
+        ), -1, true);
+        shieldScale.value = withRepeat(withSequence(
+            withTiming(1.05, { duration: 1500 }),
+            withTiming(1, { duration: 1500 })
+        ), -1, true);
+    }, []));
+
+    const animatedShieldStyle = useAnimatedStyle(() => ({ transform: [{ scale: shieldScale.value }] }));
+    const animatedPulseStyle = useAnimatedStyle(() => ({ opacity: shieldOpacity.value, transform: [{ scale: shieldScale.value }] }));
+
+    // ── Logger modal state ─────────────────────────────────────────────────
     const [modalVisible, setModalVisible] = useState(false);
     const [logType, setLogType] = useState<'craving' | 'intake'>('craving');
     const [trigger, setTrigger] = useState('');
     const [mood, setMood] = useState('');
     const [severity, setSeverity] = useState(5);
-
-    const TRIGGERS = ["Stress", "Boredom", "Social", "Habit", "Hunger", "Tired"];
-    const MOODS = ["Anxious", "Sad", "Neutral", "Happy", "Excited"];
-
-    const refreshData = useCallback(async () => {
-        if (!user) return;
-        setRefreshing(true);
-
-        const { data: recentLogs } = await supabase
-            .from('sugar_logs')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-        if (recentLogs) setLogs(recentLogs as SugarLog[]);
-
-        const { data: lastIntake } = await supabase
-            .from('sugar_logs')
-            .select('created_at')
-            .eq('user_id', user.id)
-            .eq('type', 'intake')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (lastIntake) {
-            const lastDate = new Date(lastIntake.created_at);
-            const now = new Date();
-            const diffTime = Math.abs(now.getTime() - lastDate.getTime());
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            setStreak(diffDays);
-        } else {
-            setStreak(recentLogs && recentLogs.length > 0 ?
-                Math.floor((new Date().getTime() - new Date(recentLogs[recentLogs.length - 1].created_at!).getTime()) / (1000 * 3600 * 24))
-                : 0
-            );
-        }
-        setRefreshing(false);
-    }, [user]);
-
-    useFocusEffect(
-        useCallback(() => {
-            refreshData();
-            startPulse();
-        }, [refreshData])
-    );
-
-    const startPulse = () => {
-        shieldOpacity.value = withRepeat(
-            withSequence(
-                withTiming(0.6, { duration: 1500 }),
-                withTiming(0.2, { duration: 1500 })
-            ),
-            -1,
-            true
-        );
-        shieldScale.value = withRepeat(
-            withSequence(
-                withTiming(1.05, { duration: 1500 }),
-                withTiming(1, { duration: 1500 })
-            ),
-            -1,
-            true
-        );
-    };
-
-    const animatedShieldStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: shieldScale.value }],
-    }));
-
-    const animatedPulseStyle = useAnimatedStyle(() => ({
-        opacity: shieldOpacity.value,
-        transform: [{ scale: shieldScale.value }],
-    }));
+    const [saving, setSaving] = useState(false);
 
     const openLogger = (type: 'craving' | 'intake') => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -116,34 +95,27 @@ export default function SugarScreen() {
         setModalVisible(true);
     };
 
+    // ── Submit — delegates to shared useSugarLogs hook (optimistic) ────────
     const submitLog = async () => {
-        if (!user) return;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-        const isResisted = logType === 'craving';
-
-        const newLog: Partial<SugarLog> = {
-            user_id: user.id,
-            date: new Date().toISOString().split('T')[0],
-            created_at: new Date().toISOString(),
-            type: logType,
-            success_resisted: isResisted,
-            trigger: trigger || 'Unknown',
-            mood_context: mood || 'Unknown',
-            severity: severity,
-        };
-
-        const { error } = await supabase.from('sugar_logs').insert(newLog);
-
-        if (!error) {
-            setModalVisible(false);
-            refreshData();
-        } else {
-            alert('Failed to save log');
+        setSaving(true);
+        try {
+            const result = await logSugar({
+                type: logType,
+                success_resisted: logType === 'craving',
+                trigger: trigger || 'Unknown',
+                mood_context: mood || 'Unknown',
+                severity,
+            });
+            if (result) {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setModalVisible(false);
+            }
+        } finally {
+            setSaving(false);
         }
     };
 
-    const riskData = getHighRiskHours(logs);
+    const riskData = getHighRiskHours(sugarLogs);
     const topRiskHour = riskData.length > 0 ? riskData[0].hour : null;
     const styles = getStyles(theme);
 
@@ -151,8 +123,16 @@ export default function SugarScreen() {
         <View style={styles.container}>
             <ScrollView
                 contentContainerStyle={{ paddingBottom: 100 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor={theme.colors.text} />}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={loading}
+                        onRefresh={refresh}
+                        tintColor={theme.colors.text}
+                    />
+                }
             >
+                {error && <ErrorBanner message={error} theme={theme} />}
+
                 <LinearGradient
                     colors={[theme.colors.background, theme.colors.card]}
                     style={styles.header}
@@ -177,12 +157,16 @@ export default function SugarScreen() {
                         <View style={styles.insightBox}>
                             <Ionicons name="stats-chart" size={20} color={theme.colors.warning} />
                             <Text style={styles.insightText}>
-                                High risk time: <Text style={{ fontWeight: '700' }}>{topRiskHour}:00 - {topRiskHour + 1}:00</Text>
+                                High risk time:{' '}
+                                <Text style={{ fontWeight: '700' }}>
+                                    {topRiskHour}:00 – {topRiskHour + 1}:00
+                                </Text>
                             </Text>
                         </View>
                     )}
                 </LinearGradient>
 
+                {/* Action buttons */}
                 <View style={styles.actions}>
                     <HapticButton
                         style={[styles.actionButton, styles.resistButton]}
@@ -205,13 +189,15 @@ export default function SugarScreen() {
                     </HapticButton>
                 </View>
 
-                {/* Recent History */}
+                {/* Recent History — uses real-time logs from the hook */}
                 <View style={styles.historySection}>
                     <Text style={styles.sectionTitle}>Recent Activity</Text>
-                    {logs.length === 0 ? (
-                        <Text style={styles.emptyText}>No logs yet. Start tracking to build your shield!</Text>
+                    {sugarLogs.length === 0 ? (
+                        <Text style={styles.emptyText}>
+                            No logs yet. Start tracking to build your shield!
+                        </Text>
                     ) : (
-                        logs.map(log => (
+                        sugarLogs.slice(0, 20).map(log => (
                             <View key={log.id} style={styles.logItem}>
                                 <View style={[
                                     styles.dot,
@@ -228,7 +214,7 @@ export default function SugarScreen() {
                                     </View>
                                     {(log.trigger || log.mood_context) && (
                                         <Text style={styles.logContext}>
-                                            {log.trigger} • {log.mood_context} • Lvl {log.severity || '-'}
+                                            {log.trigger} · {log.mood_context} · Lvl {log.severity || '–'}
                                         </Text>
                                     )}
                                 </View>
@@ -238,7 +224,7 @@ export default function SugarScreen() {
                 </View>
             </ScrollView>
 
-            {/* Modal Logger */}
+            {/* Logger modal */}
             <Modal visible={modalVisible} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -280,17 +266,25 @@ export default function SugarScreen() {
                         <Text style={styles.label}>Intensity: {severity}/10</Text>
                         <View style={styles.sliderRow}>
                             {[1, 3, 5, 7, 10].map(v => (
-                                <HapticButton key={v} onPress={() => setSeverity(v)} style={[
-                                    styles.severityBtn,
-                                    severity === v && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                                ]}>
+                                <HapticButton
+                                    key={v}
+                                    onPress={() => setSeverity(v)}
+                                    style={[
+                                        styles.severityBtn,
+                                        severity === v && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+                                    ]}
+                                >
                                     <Text style={[styles.severityText, severity === v && { color: '#fff' }]}>{v}</Text>
                                 </HapticButton>
                             ))}
                         </View>
 
-                        <HapticButton onPress={submitLog} style={styles.saveBtn} hapticType={Haptics.NotificationFeedbackType.Success}>
-                            <Text style={styles.saveText}>Save Log</Text>
+                        <HapticButton
+                            onPress={submitLog}
+                            style={[styles.saveBtn, saving && { opacity: 0.7 }]}
+                            hapticType={Haptics.NotificationFeedbackType.Success}
+                        >
+                            <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save Log'}</Text>
                         </HapticButton>
                     </View>
                 </View>
@@ -309,35 +303,22 @@ const getStyles = (theme: any) => StyleSheet.create({
     streakBadge: { position: 'absolute', alignItems: 'center', zIndex: 2 },
     streakNumber: { fontSize: 40, fontWeight: '900', color: '#fff', textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 10 },
     streakLabel: { fontSize: 12, fontWeight: '700', color: '#e2e8f0', letterSpacing: 1 },
-
-    insightBox: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.warningLight,
-        padding: 12, borderRadius: 12, marginTop: 16
-    },
+    insightBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.warningLight, padding: 12, borderRadius: 12, marginTop: 16 },
     insightText: { color: theme.colors.warning, marginLeft: 8, fontSize: 14 },
-
     actions: { flexDirection: 'row', padding: 20, gap: 12, marginTop: -20 },
-    actionButton: {
-        flex: 1, padding: 20, borderRadius: 20, alignItems: 'center',
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4
-    },
-    resistButton: { backgroundColor: theme.colors.primary }, // Indigo
-    relapseButton: { backgroundColor: theme.colors.error }, // Red
+    actionButton: { flex: 1, padding: 20, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+    resistButton: { backgroundColor: theme.colors.primary },
+    relapseButton: { backgroundColor: theme.colors.error },
     actionText: { color: '#fff', fontWeight: '700', fontSize: 16, marginTop: 8 },
     actionSubtext: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
-
     historySection: { padding: 20 },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.textSecondary, marginBottom: 12 },
     emptyText: { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 20 },
-    logItem: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.card,
-        padding: 16, borderRadius: 12, marginBottom: 8, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 1
-    },
+    logItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.card, padding: 16, borderRadius: 12, marginBottom: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
     dot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
     logType: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
     logTime: { fontSize: 12, color: theme.colors.textSecondary },
     logContext: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 },
-
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: theme.colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
@@ -348,14 +329,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     chipActive: { backgroundColor: theme.colors.primaryLight, borderWidth: 1, borderColor: theme.colors.primary },
     chipText: { color: theme.colors.textSecondary, fontSize: 14 },
     chipTextActive: { color: theme.colors.primary, fontWeight: '600' },
-
     sliderRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, marginBottom: 32 },
-    severityBtn: {
-        width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.border,
-        alignItems: 'center', justifyContent: 'center'
-    },
+    severityBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
     severityText: { fontSize: 16, fontWeight: '600', color: theme.colors.textSecondary },
-
     saveBtn: { backgroundColor: theme.colors.primary, borderRadius: 12, padding: 16, alignItems: 'center' },
     saveText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
