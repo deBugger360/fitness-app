@@ -3,7 +3,8 @@ import { supabase } from '../context/AuthProvider';
 import { useFocusEffect } from '@react-navigation/native';
 import { BehaviorLog, WorkoutLog, MealLog, SugarLog } from '@repo/types';
 import { Foundation } from '@repo/shared';
-import { calculateDailyScore, saveWorkout } from '@repo/lib';
+import { calculateDailyScore } from '@repo/analytics';
+import { saveWorkout } from '@repo/lib';
 
 export function useTodayData(userId?: string) {
     const [loading, setLoading] = useState(true);

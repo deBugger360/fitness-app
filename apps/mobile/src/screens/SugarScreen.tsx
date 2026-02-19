@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth, supabase } from '../context/AuthProvider';
 import { SugarLog } from '@repo/types';
-import { getHighRiskHours } from '@repo/lib';
+import { getHighRiskHours } from '@repo/analytics';
 import Animated, { useSharedValue, withRepeat, withTiming, useAnimatedStyle, withSequence } from 'react-native-reanimated';
 import { HapticButton } from '../components/ui/HapticButton';
 import * as Haptics from 'expo-haptics';

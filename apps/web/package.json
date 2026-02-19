@@ -22,7 +22,8 @@
     "recharts": "^3.7.0",
     "@repo/shared": "*",
     "@repo/lib": "*",
-    "@repo/hooks": "*"
+    "@repo/hooks": "*",
+    "@repo/analytics": "*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { WorkoutLog, MealLog, SugarLog, DailyScore } from '@repo/types';
 import { Foundation } from '@repo/shared';
-import { calculateDailyScore, calculateStreak } from '@repo/lib';
+import { calculateDailyScore, calculateStreak } from '@repo/analytics';
 
 export interface UseDailyStatsResult {
     workouts: WorkoutLog[];

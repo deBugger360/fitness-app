@@ -24,6 +24,9 @@
             ],
             "@repo/lib": [
                 "../lib/src"
+            ],
+            "@repo/analytics": [
+                "../analytics/src"
             ]
         }
     },
