@@ -52,7 +52,7 @@ export function useTodayData(userId?: string) {
     );
 
     // ── Derived stats (convenience shape for TodayScreen) ────────────────────
-    const waterCount = meals.reduce((acc, m) => acc + (m.green_tea_cups || 0), 0);
+    const waterCount = meals.reduce((acc, m) => acc + (m.water_liters || 0), 0);
     const cravingCount = sugarLogs.filter(s => s.type === 'craving').length;
 
     const stats = {
@@ -76,17 +76,30 @@ export function useTodayData(userId?: string) {
 
         try {
             if (type === 'workout') {
+                // Navigate to WorkoutScreen instead of direct log?
+                // For now, keep as quick toggle but we will replace navigation in UI.
                 await saveWorkout(supabase, userId, {
                     date: today,
                     morning_hiit_completed: true,
                 });
             } else if (type === 'water') {
-                await supabase.from('meals').insert({
-                    user_id: userId,
-                    date: today,
-                    green_tea_cups: 1,
-                    quality: 'healthy',
-                });
+                const currentWater = meals.reduce((acc, m) => acc + (m.water_liters || 0), 0);
+                const newWater = currentWater + 0.25;
+
+                // Check if row exists
+                const existing = meals.find(m => m.date === today);
+
+                if (existing) {
+                    await supabase.from('meals').update({ water_liters: newWater }).eq('id', existing.id);
+                } else {
+                    await supabase.from('meals').insert({
+                        user_id: userId,
+                        date: today,
+                        water_liters: newWater,
+                        green_tea_cups: 0,
+                        quality: 'healthy',
+                    });
+                }
             }
             // After write, refresh to get real count + score
             await refresh();
@@ -101,17 +114,22 @@ export function useTodayData(userId?: string) {
                     morning_hiit_completed: true
                 });
             } else if (type === 'water') {
-                offline.queueMutation('meals', 'INSERT', {
+                const currentWater = meals.reduce((acc, m) => acc + (m.water_liters || 0), 0);
+                const newWater = currentWater + 0.25;
+
+                // We queue an UPSERT which works for both insert/update if ID is known, 
+                // but for new rows offline we rely on unique constraints (user_id + date).
+                // Meals table should have unique constraint on (user_id, date).
+                offline.queueMutation('meals', 'UPSERT', {
                     user_id: userId,
                     date: today,
-                    green_tea_cups: 1,
-                    quality: 'healthy'
+                    water_liters: newWater
                 });
             }
 
             await refresh(); // Load from cache or update state
         }
-    }, [userId, today, refresh]);
+    }, [userId, today, refresh, meals]);
 
     return {
         loading,

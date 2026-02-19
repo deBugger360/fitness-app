@@ -31,3 +31,6 @@ export type { UseDateRangeDataResult } from './useDateRangeData';
 
 export { useRecommendations } from './useRecommendations';
 export type { UseRecommendationsResult } from './useRecommendations';
+
+export { usePersonalizedPlan } from './usePersonalizedPlan';
+export type { PersonalizedPlan, ExercisePlan } from './usePersonalizedPlan';

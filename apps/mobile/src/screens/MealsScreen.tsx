@@ -1,10 +1,11 @@
 import React, { useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DietAnalysisModal from '../components/DietAnalysisModal';
 import { useAuth, supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
 import { useMeals } from '@repo/hooks';
-import { HapticButton } from '../components/ui';
+import { HapticButton, Skeleton } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, {
     useSharedValue,
@@ -69,6 +70,7 @@ export default function MealsScreen() {
     const [description, setDescription] = React.useState('');
     const [quality, setQuality] = React.useState<Quality>('moderate');
     const [saving, setSaving] = React.useState(false);
+    const [analyzeVisible, setAnalyzeVisible] = React.useState(false);
 
     // ── Shared hook — same as web ──────────────────────────────────────────
     const { meals, loading, error, refresh, logMeal } = useMeals(
@@ -123,6 +125,15 @@ export default function MealsScreen() {
 
     return (
         <View style={[st.container, { backgroundColor: theme.colors.background }]}>
+            {/* ... Header ... */}
+
+            {/* Modal */}
+            <DietAnalysisModal
+                visible={analyzeVisible}
+                onClose={() => setAnalyzeVisible(false)}
+                userId={user?.id}
+            />
+
             {/* Header */}
             <Animated.View style={[st.header, headerAnim]}>
                 <View>
@@ -152,6 +163,18 @@ export default function MealsScreen() {
                 )}
 
                 {/* Input card */}
+                <HapticButton
+                    style={[st.analyzeBtn, { backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : '#e0e7ff', borderColor: isDark ? 'rgba(99,102,241,0.3)' : '#c7d2fe' }]}
+                    onPress={() => setAnalyzeVisible(true)}
+                >
+                    <Ionicons name="sparkles" size={20} color="#6366f1" />
+                    <View style={{ flex: 1 }}>
+                        <Text style={[st.analyzeTitle, { color: '#6366f1' }]}>Analyze My Diet</Text>
+                        <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>Checking if that shawarma was worth it?</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#6366f1" />
+                </HapticButton>
+
                 <Animated.View style={[st.card, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
                     <Text style={[st.label, { color: theme.colors.textSecondary }]}>What did you eat?</Text>
                     <TextInput
@@ -198,8 +221,14 @@ export default function MealsScreen() {
                     </HapticButton>
                 </Animated.View>
 
-                {/* Today's log */}
-                {todayMeals.length > 0 && (
+                {/* Today's log with Skeletons */}
+                {(loading && todayMeals.length === 0) ? (
+                    <View style={{ gap: 12, marginTop: 20 }}>
+                        <Skeleton width={120} height={20} style={{ marginBottom: 4 }} />
+                        <Skeleton width="100%" height={70} borderRadius={24} />
+                        <Skeleton width="100%" height={70} borderRadius={24} />
+                    </View>
+                ) : todayMeals.length > 0 ? (
                     <>
                         <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Today's Log</Text>
                         {todayMeals.map((item, i) => (
@@ -212,6 +241,10 @@ export default function MealsScreen() {
                             />
                         ))}
                     </>
+                ) : (
+                    <Text style={{ textAlign: 'center', color: theme.colors.textMuted, marginTop: 40 }}>
+                        No meals logged today.
+                    </Text>
                 )}
             </ScrollView>
         </View>
@@ -262,4 +295,8 @@ const st = StyleSheet.create({
     qualityDot: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
     historyText: { fontSize: 15, fontWeight: '600' },
     historyMeta: { fontSize: 12, marginTop: 2 },
+    analyzeBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 24, borderWidth: 1, marginBottom: 20
+    },
+    analyzeTitle: { fontSize: 16, fontWeight: '700' },
 });

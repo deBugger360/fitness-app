@@ -87,7 +87,7 @@ export function useMeals(
         } finally {
             setLoading(false);
         }
-    }, [userId, options.date, options.startDate, options.endDate, loading]);
+    }, [userId, options.date, options.startDate, options.endDate]); // Removed 'loading'
 
     useEffect(() => {
         refresh();
@@ -101,14 +101,16 @@ export function useMeals(
 
         // Optimistic object
         const optimistic: MealLog = {
+            ...normalized,
             id: 'temp-' + Date.now(),
             user_id: userId,
             created_at: new Date().toISOString(),
+            // Ensure required fields if missing from normalized
             date: normalized.date || today,
             green_tea_cups: normalized.green_tea_cups || 0,
             quality: normalized.quality || 'moderate',
             description: normalized.description || ''
-        };
+        } as MealLog;
 
         // Update local state primarily by finding today's entry and merging
         setMeals(prev => {

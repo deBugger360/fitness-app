@@ -10,7 +10,7 @@ import { useAuth, supabase } from '../context/AuthProvider';
 import { getHighRiskHours } from '@repo/analytics';
 import { useSugarLogs } from '@repo/hooks';
 import { useTheme } from '@repo/ui';
-import { HapticButton } from '../components/ui/HapticButton';
+import { HapticButton, Skeleton } from '../components/ui';
 import Animated, {
     useSharedValue,
     withRepeat,
@@ -192,7 +192,13 @@ export default function SugarScreen() {
                 {/* Recent History — uses real-time logs from the hook */}
                 <View style={styles.historySection}>
                     <Text style={styles.sectionTitle}>Recent Activity</Text>
-                    {sugarLogs.length === 0 ? (
+                    {(loading && sugarLogs.length === 0) ? (
+                        <View style={{ gap: 8 }}>
+                            <Skeleton width="100%" height={64} borderRadius={12} />
+                            <Skeleton width="100%" height={64} borderRadius={12} />
+                            <Skeleton width="100%" height={64} borderRadius={12} />
+                        </View>
+                    ) : sugarLogs.length === 0 ? (
                         <Text style={styles.emptyText}>
                             No logs yet. Start tracking to build your shield!
                         </Text>

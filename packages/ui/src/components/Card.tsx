@@ -61,7 +61,7 @@ export const Card: React.FC<CardProps> = ({
     }));
 
     // Simulate glass: web → bg-white/60 dark:bg-slate-900/60
-    const bgColor = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const bgColor = isDark ? 'rgba(15,23,42,0.60)' : 'rgba(255,255,255,0.60)';
     // Ring border: web → ring-slate-900/5 dark:ring-white/5
     const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
 
@@ -89,7 +89,7 @@ const st = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
         shadowRadius: 24,
-        elevation: 3,
+        elevation: 0, // Fix 'white box' artifact on Android with transparent bg
         overflow: 'hidden',
     },
 });

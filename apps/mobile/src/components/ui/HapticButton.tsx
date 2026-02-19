@@ -43,11 +43,15 @@ export const HapticButton: React.FC<HapticButtonProps> = ({
 
     const handlePress = (e: any) => {
         // Trigger Haptic
-        if (typeof hapticType === 'string') {
-            // Notification type (success, warning, error)
+        const notifications = [
+            Haptics.NotificationFeedbackType.Success,
+            Haptics.NotificationFeedbackType.Warning,
+            Haptics.NotificationFeedbackType.Error,
+        ];
+
+        if (notifications.includes(hapticType as any)) {
             Haptics.notificationAsync(hapticType as Haptics.NotificationFeedbackType);
         } else {
-            // Impact type (light, medium, heavy)
             Haptics.impactAsync(hapticType as Haptics.ImpactFeedbackStyle);
         }
 

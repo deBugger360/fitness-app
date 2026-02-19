@@ -1,12 +1,14 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useAuth } from '../context/AuthProvider';
+import { useAuth, supabase } from '../context/AuthProvider';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTodayData } from '../hooks/useTodayData';
+import { useUserProfile } from '@repo/hooks';
 import { HapticButton, Skeleton } from '../components/ui';
 import { useTheme, Card, ProgressRing, SectionHeader } from '@repo/ui';
+import RecommendationEngine from '../components/RecommendationEngine';
 import Animated, {
     useSharedValue,
     withTiming,
@@ -90,8 +92,11 @@ export default function TodayScreen({ navigation }: any) {
     const { user } = useAuth();
     const { theme, isDark } = useTheme();
     const { loading, score, streak, stats, logAction, refresh } = useTodayData(user?.id);
-    const userName = user?.email?.split('@')[0] || 'Friend';
-    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+    const { profile } = useUserProfile(supabase, user?.id);
+
+    // Name logic: Use profile name (first name) or email fallback
+    const rawName = profile?.name || user?.email?.split('@')[0] || 'Friend';
+    const displayName = rawName.split(' ')[0].charAt(0).toUpperCase() + rawName.split(' ')[0].slice(1);
 
     // Header entrance
     const headerOpacity = useSharedValue(0);
@@ -164,6 +169,9 @@ export default function TodayScreen({ navigation }: any) {
                     </HapticButton>
                 </Animated.View>
 
+                {/* Smart Insight */}
+                <RecommendationEngine />
+
                 {/* Hero card: ProgressRing */}
                 <Card delay={100} style={st.heroCard}>
                     <ProgressRing
@@ -195,7 +203,7 @@ export default function TodayScreen({ navigation }: any) {
                         theme={theme} delay={280}
                     />
                     <StatCard
-                        label="Water" value={stats.water} unit="Cups"
+                        label="Water" value={stats.water ? stats.water.toFixed(2) : 0} unit="Liters"
                         icon="water" iconColor={theme.colors.primary}
                         theme={theme} delay={360}
                     />
@@ -213,7 +221,7 @@ export default function TodayScreen({ navigation }: any) {
                         label="Log Workout" icon="barbell"
                         color={theme.colors.warning}
                         count={stats.workouts}
-                        onPress={() => logAction('workout')}
+                        onPress={() => navigation.navigate('Workout')}
                         theme={theme} delay={440}
                     />
                     <QuickAction
@@ -226,8 +234,8 @@ export default function TodayScreen({ navigation }: any) {
                     <QuickAction
                         label="Log Water" icon="water"
                         color={theme.colors.primary}
-                        count={stats.water}
-                        onPress={() => logAction('water')}
+                        count={stats.water ? stats.water.toFixed(2) : 0}
+                        onPress={() => navigation.navigate('Water')}
                         theme={theme} delay={580}
                     />
                     <QuickAction
@@ -257,7 +265,7 @@ const st = StyleSheet.create({
         borderWidth: 1,
         alignItems: 'center', justifyContent: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+        shadowOpacity: 0.06, shadowRadius: 8, elevation: 0,
     },
     profileDot: {
         position: 'absolute', top: 0, right: 0,
@@ -281,7 +289,7 @@ const st = StyleSheet.create({
         flex: 1, padding: 16, borderRadius: 28,
         borderWidth: 1,
         shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.07, shadowRadius: 16, elevation: 2,
+        shadowOpacity: 0.07, shadowRadius: 16, elevation: 0,
         alignItems: 'center',
     },
     statIconBox: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
@@ -296,7 +304,7 @@ const st = StyleSheet.create({
         flexDirection: 'row', alignItems: 'center', padding: 18,
         borderRadius: 24, borderWidth: 1,
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
+        shadowOpacity: 0.05, shadowRadius: 12, elevation: 0,
     },
     actionIconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
     actionLabel: { fontSize: 16, fontWeight: '600' },

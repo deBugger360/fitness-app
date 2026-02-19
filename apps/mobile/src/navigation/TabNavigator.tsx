@@ -1,3 +1,4 @@
+// Profile removed from tabs, accessible via App Stack
 import React from 'react';
 import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,7 +10,6 @@ import ActivityScreen from '../screens/ActivityScreen';
 import MealsScreen from '../screens/MealsScreen';
 import SugarScreen from '../screens/SugarScreen';
 import InsightsScreen from '../screens/InsightsScreen';
-import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,7 +20,6 @@ const TAB_CONFIG: Record<string, { icon: string; iconFocused: string; label: str
     Meals: { icon: 'restaurant-outline', iconFocused: 'restaurant', label: 'Meals' },
     Sugar: { icon: 'shield-checkmark-outline', iconFocused: 'shield-checkmark', label: 'Sugar' },
     Insights: { icon: 'bar-chart-outline', iconFocused: 'bar-chart', label: 'Insights' },
-    Profile: { icon: 'person-outline', iconFocused: 'person', label: 'Profile' },
 };
 
 export default function TabNavigator() {
@@ -81,7 +80,6 @@ export default function TabNavigator() {
             <Tab.Screen name="Meals" component={MealsScreen} />
             <Tab.Screen name="Sugar" component={SugarScreen} />
             <Tab.Screen name="Insights" component={InsightsScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
         </Tab.Navigator>
     );
 }

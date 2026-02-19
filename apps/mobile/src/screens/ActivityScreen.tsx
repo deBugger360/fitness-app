@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
 import { FOUNDATION_PRINCIPLES } from '@repo/shared';
 import { useFoundations } from '@repo/hooks';
+import { Skeleton, HapticButton } from '../components/ui';
+import * as Haptics from 'expo-haptics';
 import Animated, {
     useSharedValue,
     withSpring,
@@ -45,7 +47,7 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
 
     return (
         <Animated.View style={anim}>
-            <TouchableOpacity
+            <HapticButton
                 style={[styles.habitRow, {
                     backgroundColor: isChecked
                         ? (theme.dark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.06)')
@@ -53,7 +55,7 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
                     borderRadius: 20,
                 }]}
                 onPress={() => onToggle(principle.id)}
-                activeOpacity={0.7}
+                hapticType={Haptics.ImpactFeedbackStyle.Light}
             >
                 <View style={styles.habitLeft}>
                     <View style={[styles.iconBox, {
@@ -80,7 +82,7 @@ const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
                 }]}>
                     {isChecked && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
-            </TouchableOpacity>
+            </HapticButton>
         </Animated.View>
     );
 };
@@ -114,7 +116,7 @@ export default function ActivityScreen() {
     const today = new Date().toISOString().split('T')[0];
 
     // ── Shared hook — same as web ──────────────────────────────────────────
-    const { foundations, today: todayFoundation, loading, error, saveFoundation } = useFoundations(
+    const { foundations, today: todayFoundation, loading, error, saveFoundation, refresh } = useFoundations(
         supabase,
         user?.id,
         { date: today }
@@ -142,14 +144,23 @@ export default function ActivityScreen() {
 
     // ── Toggle habit — optimistic via saveFoundation ────────────────────────
     const toggleHabit = async (habitId: string) => {
+        // Haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
         const currentChecked = !!habits[habitId];
         const newNotes = { ...(todayFoundation?.notes || {}), [habitId]: !currentChecked };
         const completedIds = FOUNDATION_PRINCIPLES
             .map(p => p.id)
             .filter(id => (id === habitId ? !currentChecked : !!newNotes[id]));
 
-        // saveFoundation in @repo/hooks handles optimistic local update + upsert
+        // saveFoundation handles optimistic update
         await saveFoundation(today, completedIds, newNotes);
+
+        // Use notification success if checking the item
+        if (!currentChecked) {
+            // slightly delayed success or immediate? Immediate feels snappier.
+            // But impactAsync above handles the immediate "click".
+        }
     };
 
     const completedCount = Object.values(habits).filter(Boolean).length;
@@ -158,6 +169,27 @@ export default function ActivityScreen() {
 
     const bgColor = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
     const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+
+    if (loading && !todayFoundation && foundations.length === 0) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+                <Animated.View style={[styles.header, headerAnim]}>
+                    <View>
+                        <Skeleton width={180} height={32} style={{ marginBottom: 8 }} />
+                        <Skeleton width={120} height={14} />
+                    </View>
+                </Animated.View>
+                <ScrollView contentContainerStyle={styles.content}>
+                    <Skeleton width="100%" height={140} borderRadius={32} style={{ marginBottom: 24 }} />
+                    <View style={{ gap: 12 }}>
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <Skeleton key={i} width="100%" height={72} borderRadius={20} />
+                        ))}
+                    </View>
+                </ScrollView>
+            </View>
+        );
+    }
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -168,13 +200,15 @@ export default function ActivityScreen() {
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </Text>
                 </View>
-                {/* Sync indicator — shows loading state without blocking UI */}
-                {loading && (
-                    <View style={[styles.syncDot, { backgroundColor: theme.colors.primary }]} />
-                )}
             </Animated.View>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.content}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={theme.colors.primary} />
+                }
+            >
 
                 {error && <ErrorBanner message={error} theme={theme} />}
 
@@ -238,7 +272,7 @@ const styles = StyleSheet.create({
 
     progressCard: {
         borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 16,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 0,
     },
     progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
     progressTitle: { fontSize: 17, fontWeight: '700' },
@@ -250,7 +284,7 @@ const styles = StyleSheet.create({
 
     habitsCard: {
         borderRadius: 32, borderWidth: 1, padding: 8,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 0,
     },
     habitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, marginVertical: 2 },
     habitLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
