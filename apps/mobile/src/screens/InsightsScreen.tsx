@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
@@ -8,33 +8,83 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@repo/ui';
 import { generateRecommendations } from '@repo/lib';
 import { Recommendation } from '@repo/shared';
+import { Ionicons } from '@expo/vector-icons';
+import { Skeleton } from '../components/ui';
+import Animated, {
+    useSharedValue,
+    withSpring,
+    withDelay,
+    withTiming,
+    useAnimatedStyle,
+    Easing,
+} from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
-// Mock chart data for MVP — replace with real aggregation when analytics table is populated
 const MOCK_CHART_DATA = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-        {
-            data: [85, 90, 60, 95, 100, 80, 92],
-            strokeWidth: 2
-        }
-    ],
-    legend: ["Consistency Score"]
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{ data: [85, 90, 60, 95, 100, 80, 92], strokeWidth: 2 }],
+    legend: ['Consistency Score'],
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-    high: '#ef4444',
-    medium: '#f59e0b',
-    low: '#10b981',
+const PRIORITY_CONFIG: Record<string, { color: string; bg: string; icon: string; label: string }> = {
+    high: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)', icon: 'alert-circle', label: 'High Priority' },
+    medium: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', icon: 'time', label: 'Medium' },
+    low: { color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: 'checkmark-circle', label: 'Low' },
 };
 
+// ─── Animated recommendation card ────────────────────────────────────────────
+const RecCard = ({ rec, theme, delay, isDark }: any) => {
+    const cfg = PRIORITY_CONFIG[rec.priority] || PRIORITY_CONFIG.medium;
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(12);
+    const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+
+    React.useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
+        translateY.value = withDelay(delay, withSpring(0, { damping: 20, stiffness: 120 }));
+    }, []);
+    const anim = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        transform: [{ translateY: translateY.value }],
+    }));
+
+    return (
+        <Animated.View style={[st.recCard, { backgroundColor: bgGlass, borderColor: borderGlass }, anim]}>
+            <View style={[st.priorityBadge, { backgroundColor: cfg.bg }]}>
+                <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
+            </View>
+            <View style={st.recBody}>
+                <View style={st.recHeader}>
+                    <Text style={[st.recTitle, { color: theme.colors.text }]}>{rec.title}</Text>
+                    <View style={[st.priorityTag, { backgroundColor: cfg.bg }]}>
+                        <Text style={[st.priorityLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                    </View>
+                </View>
+                <Text style={[st.recMessage, { color: theme.colors.textSecondary }]}>{rec.message}</Text>
+            </View>
+        </Animated.View>
+    );
+};
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 export default function InsightsScreen() {
     const { user } = useAuth();
-    const { theme } = useTheme();
-    const styles = getStyles(theme);
+    const { theme, isDark } = useTheme();
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [loadingRecs, setLoadingRecs] = useState(false);
+
+    const headerOpacity = useSharedValue(0);
+    const headerY = useSharedValue(-20);
+    React.useEffect(() => {
+        headerOpacity.value = withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) });
+        headerY.value = withSpring(0, { damping: 20, stiffness: 100 });
+    }, []);
+    const headerAnim = useAnimatedStyle(() => ({
+        opacity: headerOpacity.value,
+        transform: [{ translateY: headerY.value }],
+    }));
 
     const fetchRecommendations = useCallback(async () => {
         if (!user?.id) return;
@@ -42,176 +92,133 @@ export default function InsightsScreen() {
         try {
             const recs = await generateRecommendations(supabase, user.id);
             setRecommendations(recs);
-        } catch (e) {
-            console.error('Failed to fetch recommendations:', e);
-        } finally {
-            setLoadingRecs(false);
-        }
+        } catch (e) { console.error(e); }
+        finally { setLoadingRecs(false); }
     }, [user?.id]);
 
-    useFocusEffect(
-        useCallback(() => {
-            fetchRecommendations();
-        }, [fetchRecommendations])
-    );
+    useFocusEffect(useCallback(() => { fetchRecommendations(); }, [fetchRecommendations]));
+
+    const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Insights</Text>
-                <Text style={styles.subtitle}>Your progress this week</Text>
-            </View>
+        <View style={[st.container, { backgroundColor: theme.colors.background }]}>
+            <Animated.View style={[st.header, headerAnim]}>
+                <Text style={[st.title, { color: theme.colors.text }]}>Insights</Text>
+                <Text style={[st.subtitle, { color: theme.colors.textSecondary }]}>Your progress this week</Text>
+            </Animated.View>
 
-            {/* Consistency Chart */}
-            <View style={styles.chartCard}>
-                <Text style={styles.chartTitle}>Consistency Trend</Text>
-                <LineChart
-                    data={{
-                        ...MOCK_CHART_DATA,
-                        datasets: [{ ...MOCK_CHART_DATA.datasets[0], color: (opacity = 1) => theme.colors.primary }]
-                    }}
-                    width={width - 48}
-                    height={220}
-                    chartConfig={{
-                        backgroundColor: theme.colors.card,
-                        backgroundGradientFrom: theme.colors.card,
-                        backgroundGradientTo: theme.colors.card,
-                        decimalPlaces: 0,
-                        color: (opacity = 1) => theme.colors.primary,
-                        labelColor: (opacity = 1) => theme.colors.textSecondary,
-                        style: { borderRadius: 16 },
-                        propsForDots: {
-                            r: "5",
-                            strokeWidth: "2",
-                            stroke: theme.colors.primary
-                        }
-                    }}
-                    bezier
-                    style={{ marginVertical: 8, borderRadius: 16 }}
-                />
-            </View>
+            <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
 
-            {/* Recommendations */}
-            <Text style={styles.sectionTitle}>Recommendations</Text>
-            {loadingRecs ? (
-                <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 16 }} />
-            ) : recommendations.length === 0 ? (
-                <View style={styles.emptyCard}>
-                    <Text style={styles.emptyText}>No recommendations yet. Keep logging your data!</Text>
-                </View>
-            ) : (
-                recommendations.map((rec) => (
-                    <View key={rec.id} style={styles.recCard}>
-                        <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLORS[rec.priority] || '#6b7280' }]} />
-                        <View style={styles.recContent}>
-                            <Text style={styles.recTitle}>{rec.title}</Text>
-                            <Text style={styles.recMessage}>{rec.message}</Text>
-                        </View>
-                    </View>
-                ))
-            )}
-        </ScrollView>
+                {/* Chart card */}
+                <Animated.View style={[st.chartCard, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
+                    <Text style={[st.chartTitle, { color: theme.colors.text }]}>Consistency Trend</Text>
+                    <Text style={[st.chartSub, { color: theme.colors.textSecondary }]}>Last 7 days</Text>
+                    <LineChart
+                        data={{
+                            ...MOCK_CHART_DATA,
+                            datasets: [{
+                                ...MOCK_CHART_DATA.datasets[0],
+                                color: (opacity = 1) => theme.colors.primary,
+                            }],
+                        }}
+                        width={width - 80}
+                        height={200}
+                        chartConfig={{
+                            backgroundColor: 'transparent',
+                            backgroundGradientFrom: 'transparent',
+                            backgroundGradientTo: 'transparent',
+                            backgroundGradientFromOpacity: 0,
+                            backgroundGradientToOpacity: 0,
+                            decimalPlaces: 0,
+                            color: (opacity = 1) => theme.colors.primary,
+                            labelColor: () => theme.colors.textSecondary,
+                            style: { borderRadius: 16 },
+                            propsForDots: {
+                                r: '5',
+                                strokeWidth: '2',
+                                stroke: theme.colors.primary,
+                                fill: isDark ? '#0f172a' : '#fff',
+                            },
+                            propsForBackgroundLines: {
+                                stroke: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)',
+                                strokeDasharray: '4',
+                            },
+                        }}
+                        bezier
+                        withInnerLines
+                        transparent
+                        style={{ marginVertical: 8, borderRadius: 16 }}
+                    />
+                </Animated.View>
+
+                {/* Recommendations */}
+                <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Smart Recommendations</Text>
+
+                {loadingRecs ? (
+                    <>
+                        <Skeleton width="100%" height={90} borderRadius={24} style={{ marginBottom: 12 }} />
+                        <Skeleton width="100%" height={90} borderRadius={24} style={{ marginBottom: 12 }} />
+                        <Skeleton width="100%" height={90} borderRadius={24} />
+                    </>
+                ) : recommendations.length === 0 ? (
+                    <Animated.View style={[st.emptyCard, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
+                        <Ionicons name="analytics-outline" size={40} color={theme.colors.textMuted} style={{ marginBottom: 12 }} />
+                        <Text style={[st.emptyTitle, { color: theme.colors.text }]}>Building your insights</Text>
+                        <Text style={[st.emptyText, { color: theme.colors.textSecondary }]}>
+                            Keep logging your data. Personalized recommendations appear after a few days.
+                        </Text>
+                    </Animated.View>
+                ) : (
+                    recommendations.map((rec, i) => (
+                        <RecCard key={rec.id} rec={rec} theme={theme} isDark={isDark} delay={i * 80} />
+                    ))
+                )}
+
+            </ScrollView>
+        </View>
     );
 }
 
-const getStyles = (theme: any) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    content: {
-        paddingTop: 60,
-        paddingHorizontal: 24,
-        paddingBottom: 40,
-    },
-    header: {
-        marginBottom: 32,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: theme.colors.text,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
+const st = StyleSheet.create({
+    container: { flex: 1 },
+    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 8 },
+    title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+    subtitle: { fontSize: 15, fontWeight: '500', marginTop: 4 },
+    content: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 48 },
+
+    // Chart
     chartCard: {
-        backgroundColor: theme.colors.card,
-        borderRadius: 24,
-        padding: 16,
+        borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 28,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
+        overflow: 'hidden',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        marginBottom: 32,
     },
-    chartTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: theme.colors.text,
-        marginBottom: 12,
-        alignSelf: 'flex-start',
-        paddingLeft: 8,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: theme.colors.text,
-        marginBottom: 16,
-    },
+    chartTitle: { fontSize: 18, fontWeight: '700', alignSelf: 'flex-start' },
+    chartSub: { fontSize: 13, fontWeight: '500', alignSelf: 'flex-start', marginTop: 3, marginBottom: 4 },
+
+    // Section
+    sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 14 },
+
+    // Rec cards
     recCard: {
-        flexDirection: 'row',
-        backgroundColor: theme.colors.card,
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.03,
-        shadowRadius: 4,
-        elevation: 1,
+        flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+        borderRadius: 24, borderWidth: 1, padding: 18, marginBottom: 12,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
     },
-    priorityDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        marginTop: 5,
-        marginRight: 14,
-        flexShrink: 0,
-    },
-    recContent: {
-        flex: 1,
-    },
-    recTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: theme.colors.text,
-        marginBottom: 4,
-    },
-    recMessage: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        lineHeight: 20,
-    },
+    priorityBadge: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+    recBody: { flex: 1 },
+    recHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+    recTitle: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
+    priorityTag: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
+    priorityLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+    recMessage: { fontSize: 13, lineHeight: 20 },
+
+    // Empty
     emptyCard: {
-        backgroundColor: theme.colors.card,
-        borderRadius: 16,
-        padding: 24,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderRadius: 32, borderWidth: 1, padding: 32, alignItems: 'center',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
     },
-    emptyText: {
-        color: theme.colors.textSecondary,
-        textAlign: 'center',
-        fontSize: 14,
-    },
+    emptyTitle: { fontSize: 17, fontWeight: '700', marginBottom: 8 },
+    emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 });

@@ -6,8 +6,15 @@ import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../context/AuthProvider';
 import { useTheme } from '@repo/ui';
 import { FOUNDATION_PRINCIPLES } from '@repo/shared';
+import Animated, {
+    useSharedValue,
+    withSpring,
+    withDelay,
+    withTiming,
+    useAnimatedStyle,
+    Easing,
+} from 'react-native-reanimated';
 
-// Map lucide icon names (used on web) to Ionicons equivalents for mobile
 const LUCIDE_TO_IONICONS: Record<string, string> = {
     Moon: 'moon-outline',
     Droplets: 'water-outline',
@@ -22,17 +29,102 @@ const LUCIDE_TO_IONICONS: Record<string, string> = {
     Feather: 'pencil-outline',
 };
 
+// ─── Animated habit row ───────────────────────────────────────────────────────
+const HabitRow = ({ principle, isChecked, onToggle, theme, delay }: any) => {
+    const ionicon = LUCIDE_TO_IONICONS[principle.icon] || 'checkmark-circle-outline';
+
+    const opacity = useSharedValue(0);
+    const translateX = useSharedValue(-12);
+    useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) }));
+        translateX.value = withDelay(delay, withSpring(0, { damping: 20, stiffness: 130 }));
+    }, []);
+    const anim = useAnimatedStyle(() => ({
+        opacity: opacity.value,
+        transform: [{ translateX: translateX.value }],
+    }));
+
+    return (
+        <Animated.View style={anim}>
+            <TouchableOpacity
+                style={[styles.habitRow, {
+                    backgroundColor: isChecked
+                        ? (theme.dark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.06)')
+                        : 'transparent',
+                    borderRadius: 20,
+                }]}
+                onPress={() => onToggle(principle.id)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.habitLeft}>
+                    <View style={[styles.iconBox, {
+                        backgroundColor: isChecked ? theme.colors.primary : (theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.05)'),
+                        borderColor: isChecked ? theme.colors.primary : theme.colors.border,
+                    }]}>
+                        <Ionicons
+                            name={ionicon as any}
+                            size={20}
+                            color={isChecked ? '#fff' : theme.colors.textSecondary}
+                        />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.habitLabel, {
+                            color: isChecked ? theme.colors.text : theme.colors.textSecondary,
+                            fontWeight: isChecked ? '600' : '500',
+                        }]}>
+                            {principle.name}
+                        </Text>
+                        <Text style={[styles.habitDesc, { color: theme.colors.textMuted }]}>
+                            {principle.description}
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={[styles.checkbox, {
+                    backgroundColor: isChecked ? theme.colors.success : 'transparent',
+                    borderColor: isChecked ? theme.colors.success : theme.colors.border,
+                }]}>
+                    {isChecked && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
+
+// ─── Progress bar component ───────────────────────────────────────────────────────
+const ProgressBar = ({ progress, theme }: { progress: number; theme: any }) => {
+    const width = useSharedValue(0);
+    useEffect(() => {
+        width.value = withDelay(200, withSpring(progress, { damping: 20, stiffness: 80 }));
+    }, [progress]);
+    const anim = useAnimatedStyle(() => ({ width: `${width.value}%` as any }));
+    return (
+        <View style={[styles.progressTrack, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)' }]}>
+            <Animated.View style={[styles.progressFill, { backgroundColor: theme.colors.primary }, anim]} />
+        </View>
+    );
+};
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 export default function ActivityScreen() {
     const { user } = useAuth();
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme();
     const [habits, setHabits] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
-
     const today = new Date().toISOString().split('T')[0];
 
+    const headerOpacity = useSharedValue(0);
+    const headerY = useSharedValue(-20);
     useEffect(() => {
-        fetchHabits();
-    }, [user?.id]);
+        headerOpacity.value = withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) });
+        headerY.value = withSpring(0, { damping: 20, stiffness: 100 });
+    }, []);
+    const headerAnim = useAnimatedStyle(() => ({
+        opacity: headerOpacity.value,
+        transform: [{ translateY: headerY.value }],
+    }));
+
+    useEffect(() => { fetchHabits(); }, [user?.id]);
 
     const fetchHabits = async () => {
         if (!user?.id) return;
@@ -40,198 +132,119 @@ export default function ActivityScreen() {
         try {
             const { data } = await supabase
                 .from('foundations')
-                .select('notes') // 'notes' column stores JSON of habit checklist in our simplified schema
+                .select('notes')
                 .eq('user_id', user.id)
                 .eq('date', today)
                 .single();
-
-            if (data?.notes) {
-                setHabits(data.notes);
-            } else {
-                setHabits({});
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
+            setHabits(data?.notes || {});
+        } catch { /* first log of the day — no record yet */ }
+        finally { setLoading(false); }
     };
 
     const toggleHabit = async (habitId: string) => {
         if (!user?.id) return;
-
         const newHabits = { ...habits, [habitId]: !habits[habitId] };
-
-        // Optimistic Update
         setHabits(newHabits);
-
         try {
-            // Upsert foundation log
             const { error } = await supabase
                 .from('foundations')
-                .upsert({
-                    user_id: user.id,
-                    date: today,
-                    notes: newHabits // Storing checkliststate in notes JSON column for now
-                }, { onConflict: 'user_id, date' });
-
+                .upsert({ user_id: user.id, date: today, notes: newHabits }, { onConflict: 'user_id, date' });
             if (error) throw error;
-        } catch (error) {
-            console.error("Failed to save habit", error);
-            // Revert on failure
-            setHabits(habits);
-        }
+        } catch { setHabits(habits); }
     };
 
-    const styles = getStyles(theme);
+    const completedCount = Object.values(habits).filter(Boolean).length;
+    const total = FOUNDATION_PRINCIPLES.length;
+    const progressPct = total > 0 ? (completedCount / total) * 100 : 0;
+
+    const bgColor = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const borderColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Foundations</Text>
-                <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-            </View>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <Animated.View style={[styles.header, headerAnim]}>
+                <View>
+                    <Text style={[styles.title, { color: theme.colors.text }]}>Foundations</Text>
+                    <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </Text>
+                </View>
+            </Animated.View>
 
-            <ScrollView contentContainerStyle={styles.listContainer}>
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Daily Non-Negotiables</Text>
-                    {FOUNDATION_PRINCIPLES.map((principle) => {
-                        const ionicon = LUCIDE_TO_IONICONS[principle.icon] || 'checkmark-circle-outline';
-                        const isChecked = !!habits[principle.id];
-                        return (
-                            <TouchableOpacity
-                                key={principle.id}
-                                style={styles.habitRow}
-                                onPress={() => toggleHabit(principle.id)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.habitInfo}>
-                                    <View style={[styles.iconBox, isChecked && styles.iconBoxActive]}>
-                                        <Ionicons
-                                            name={ionicon as any}
-                                            size={22}
-                                            color={isChecked ? '#fff' : theme.colors.textSecondary}
-                                        />
-                                    </View>
-                                    <View>
-                                        <Text style={[styles.habitLabel, isChecked && styles.habitLabelActive]}>
-                                            {principle.name}
-                                        </Text>
-                                        <Text style={styles.habitDescription}>{principle.description}</Text>
-                                    </View>
-                                </View>
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                {/* Progress summary card */}
+                <Animated.View style={[styles.progressCard, { backgroundColor: bgColor, borderColor }]}>
+                    <View style={styles.progressHeader}>
+                        <View>
+                            <Text style={[styles.progressTitle, { color: theme.colors.text }]}>
+                                Daily Non-Negotiables
+                            </Text>
+                            <Text style={[styles.progressSub, { color: theme.colors.textSecondary }]}>
+                                {completedCount} of {total} completed
+                            </Text>
+                        </View>
+                        <View style={[styles.progressBadge, {
+                            backgroundColor: progressPct === 100
+                                ? theme.colors.successLight
+                                : (isDark ? 'rgba(99,102,241,0.15)' : theme.colors.primaryLight),
+                        }]}>
+                            <Text style={[styles.progressPct, {
+                                color: progressPct === 100 ? theme.colors.success : theme.colors.primary,
+                            }]}>
+                                {Math.round(progressPct)}%
+                            </Text>
+                        </View>
+                    </View>
+                    <ProgressBar progress={progressPct} theme={theme} />
+                </Animated.View>
 
-                                <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
-                                    {isChecked && <Ionicons name="checkmark" size={16} color="#fff" />}
-                                </View>
-                            </TouchableOpacity>
-                        );
-                    })}
+                {/* Habits list card */}
+                <View style={[styles.habitsCard, { backgroundColor: bgColor, borderColor }]}>
+                    {FOUNDATION_PRINCIPLES.map((p, i) => (
+                        <HabitRow
+                            key={p.id}
+                            principle={p}
+                            isChecked={!!habits[p.id]}
+                            onToggle={toggleHabit}
+                            theme={theme}
+                            delay={i * 60}
+                        />
+                    ))}
                 </View>
             </ScrollView>
         </View>
     );
 }
 
-const getStyles = (theme: any) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-        paddingTop: 60,
+const styles = StyleSheet.create({
+    container: { flex: 1 },
+    header: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 20 },
+    title: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+    date: { fontSize: 14, fontWeight: '600', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+    content: { paddingHorizontal: 24, paddingBottom: 48 },
+
+    // Progress card
+    progressCard: {
+        borderRadius: 32, borderWidth: 1, padding: 24, marginBottom: 16,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
     },
-    header: {
-        paddingHorizontal: 24,
-        marginBottom: 24,
+    progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+    progressTitle: { fontSize: 17, fontWeight: '700' },
+    progressSub: { fontSize: 13, marginTop: 3, fontWeight: '500' },
+    progressBadge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
+    progressPct: { fontSize: 14, fontWeight: '800' },
+    progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+    progressFill: { height: 6, borderRadius: 3 },
+
+    // Habits card
+    habitsCard: {
+        borderRadius: 32, borderWidth: 1, padding: 8,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
     },
-    title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: theme.colors.text,
-        marginBottom: 4,
-    },
-    date: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    listContainer: {
-        paddingHorizontal: 24,
-        paddingBottom: 40,
-    },
-    card: {
-        backgroundColor: theme.colors.card,
-        borderRadius: 24,
-        padding: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: theme.colors.textSecondary,
-        margin: 16,
-        marginBottom: 8,
-    },
-    habitRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        marginVertical: 4,
-        borderRadius: 16,
-    },
-    habitInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    iconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: theme.colors.background,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    iconBoxActive: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
-    },
-    habitLabel: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: theme.colors.textSecondary,
-    },
-    habitLabelActive: {
-        color: theme.colors.text,
-        fontWeight: '600',
-    },
-    habitDescription: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        marginTop: 2,
-    },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: theme.colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    checkboxActive: {
-        backgroundColor: theme.colors.success,
-        borderColor: theme.colors.success,
-    },
+    habitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, marginVertical: 2 },
+    habitLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
+    iconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    habitLabel: { fontSize: 15 },
+    habitDesc: { fontSize: 12, marginTop: 2 },
+    checkbox: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
 });

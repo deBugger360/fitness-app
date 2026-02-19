@@ -1,54 +1,55 @@
 
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthProvider';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, G } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTodayData } from '../hooks/useTodayData';
-import { HapticButton } from '../components/ui/HapticButton';
-import Animated, { useSharedValue, withTiming, useAnimatedProps } from 'react-native-reanimated';
+import { HapticButton, Card, Skeleton } from '../components/ui';
+import Animated, {
+    useSharedValue,
+    withTiming,
+    withSpring,
+    withDelay,
+    useAnimatedProps,
+    useAnimatedStyle,
+    Easing,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@repo/ui';
 
-// Animated Circle Component
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const ConsistencyRing = ({ score, theme }: { score: number, theme: any }) => {
-    const radius = 80;
-    const strokeWidth = 15;
-    const circumference = 2 * Math.PI * radius;
+// ─── Consistency Ring ─────────────────────────────────────────────────────────
+const ConsistencyRing = ({ score, theme }: { score: number; theme: any }) => {
+    const R = 80;
+    const SW = 15;
+    const circumference = 2 * Math.PI * R;
     const progress = useSharedValue(0);
 
     useEffect(() => {
-        progress.value = withTiming(score / 100, { duration: 1500 });
+        progress.value = withDelay(300, withTiming(score / 100, { duration: 1500 }));
     }, [score]);
 
-    const animatedProps = useAnimatedProps(() => {
-        const strokeDashoffset = circumference - progress.value * circumference;
-        return {
-            strokeDashoffset,
-        };
-    });
+    const animatedProps = useAnimatedProps(() => ({
+        strokeDashoffset: circumference - progress.value * circumference,
+    }));
 
+    const size = R * 2 + SW;
     return (
-        <View style={styles(theme).ringContainer}>
-            <Svg width={radius * 2 + strokeWidth} height={radius * 2 + strokeWidth} viewBox={`0 0 ${radius * 2 + strokeWidth} ${radius * 2 + strokeWidth}`}>
-                <G rotation="-90" origin={`${radius + strokeWidth / 2}, ${radius + strokeWidth / 2}`}>
+        <View style={st.ringWrap}>
+            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <G rotation="-90" origin={`${R + SW / 2}, ${R + SW / 2}`}>
                     <Circle
-                        cx={radius + strokeWidth / 2}
-                        cy={radius + strokeWidth / 2}
-                        r={radius}
+                        cx={R + SW / 2} cy={R + SW / 2} r={R}
                         stroke={theme.colors.border}
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
+                        strokeWidth={SW} fill="transparent"
                     />
                     <AnimatedCircle
-                        cx={radius + strokeWidth / 2}
-                        cy={radius + strokeWidth / 2}
-                        r={radius}
+                        cx={R + SW / 2} cy={R + SW / 2} r={R}
                         stroke={theme.colors.primary}
-                        strokeWidth={strokeWidth}
+                        strokeWidth={SW}
                         strokeDasharray={circumference}
                         animatedProps={animatedProps}
                         strokeLinecap="round"
@@ -56,149 +57,216 @@ const ConsistencyRing = ({ score, theme }: { score: number, theme: any }) => {
                     />
                 </G>
             </Svg>
-            <View style={styles(theme).scoreContent}>
-                <Text style={styles(theme).scoreText}>{score}%</Text>
-                <Text style={styles(theme).scoreLabel}>Consistency</Text>
+            <View style={st.ringCenter}>
+                <Text style={[st.ringScore, { color: theme.colors.text }]}>{score}%</Text>
+                <Text style={[st.ringLabel, { color: theme.colors.textSecondary }]}>CONSISTENCY</Text>
             </View>
         </View>
     );
 };
 
-const QuickAction = ({ label, icon, onPress, color, count = 0, theme }: any) => (
-    <HapticButton
-        style={styles(theme).actionButton}
-        onPress={onPress}
-        hapticType={Haptics.ImpactFeedbackStyle.Medium}
-    >
-        <View style={[styles(theme).iconCircle, { backgroundColor: color + '20' }]}>
-            <Ionicons name={icon} size={28} color={color} />
-        </View>
-        <View style={{ flex: 1 }}>
-            <Text style={styles(theme).actionLabel}>{label}</Text>
-            {count > 0 && <Text style={styles(theme).actionCount}>{count} today</Text>}
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={theme.colors.border} />
-    </HapticButton>
-);
+// ─── Stat Card (mini token card, not the shared glass Card — smaller) ─────────
+const StatCard = ({ label, value, unit, icon, iconColor, theme, delay }: any) => {
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(16);
+    useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 500 }));
+        translateY.value = withDelay(delay, withSpring(0, { damping: 18, stiffness: 120 }));
+    }, []);
+    const anim = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
 
-const StatCard = ({ label, value, unit, theme }: any) => (
-    <View style={styles(theme).statCard}>
-        <Text style={styles(theme).statValue}>{value}</Text>
-        <Text style={styles(theme).statUnit}>{unit}</Text>
-        <Text style={styles(theme).statLabel}>{label}</Text>
-    </View>
-);
+    const bgColor = theme.dark
+        ? 'rgba(15, 23, 42, 0.85)'
+        : 'rgba(255, 255, 255, 0.75)';
+    const borderColor = theme.dark
+        ? 'rgba(255, 255, 255, 0.06)'
+        : 'rgba(15, 23, 42, 0.06)';
 
-import { Skeleton } from '../components/ui';
+    return (
+        <Animated.View style={[st.statCard, { backgroundColor: bgColor, borderColor }, anim]}>
+            <View style={[st.statIconBox, { backgroundColor: iconColor + '20' }]}>
+                <Ionicons name={icon} size={18} color={iconColor} />
+            </View>
+            <Text style={[st.statValue, { color: theme.colors.text }]}>{value}</Text>
+            <Text style={[st.statUnit, { color: theme.colors.textSecondary }]}>{unit}</Text>
+            <Text style={[st.statLabel, { color: theme.colors.textMuted }]}>{label}</Text>
+        </Animated.View>
+    );
+};
 
+// ─── Quick Action Row ─────────────────────────────────────────────────────────
+const QuickAction = ({ label, icon, onPress, color, count = 0, theme, delay }: any) => {
+    const opacity = useSharedValue(0);
+    const translateY = useSharedValue(12);
+    useEffect(() => {
+        opacity.value = withDelay(delay, withTiming(1, { duration: 400 }));
+        translateY.value = withDelay(delay, withSpring(0, { damping: 20, stiffness: 130 }));
+    }, []);
+    const anim = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: translateY.value }] }));
+
+    return (
+        <Animated.View style={anim}>
+            <HapticButton
+                style={[st.actionBtn, {
+                    backgroundColor: theme.dark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)',
+                    borderColor: theme.dark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)',
+                }]}
+                onPress={onPress}
+                hapticType={Haptics.ImpactFeedbackStyle.Medium}
+            >
+                <View style={[st.actionIconBox, { backgroundColor: color + '20' }]}>
+                    <Ionicons name={icon} size={26} color={color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={[st.actionLabel, { color: theme.colors.text }]}>{label}</Text>
+                    {count > 0 && (
+                        <Text style={[st.actionCount, { color: theme.colors.textSecondary }]}>
+                            {count} logged today
+                        </Text>
+                    )}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+            </HapticButton>
+        </Animated.View>
+    );
+};
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function TodayScreen({ navigation }: any) {
     const { user } = useAuth();
     const { theme, isDark } = useTheme();
     const { loading, score, streak, stats, logAction, refresh } = useTodayData(user?.id);
+    const userName = user?.email?.split('@')[0] || 'Friend';
+    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
-    const userName = user?.email?.split('@')[0] || "Friend";
+    // Header entrance
+    const headerOpacity = useSharedValue(0);
+    const headerY = useSharedValue(-20);
+    useEffect(() => {
+        headerOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+        headerY.value = withSpring(0, { damping: 20, stiffness: 100 });
+    }, []);
+    const headerAnim = useAnimatedStyle(() => ({
+        opacity: headerOpacity.value,
+        transform: [{ translateY: headerY.value }],
+    }));
 
-    if (loading && !stats) { // Initial load only, not refresh
+    if (loading && !stats) {
         return (
-            <View style={styles(theme).container}>
-                <StatusBar style={isDark ? "light" : "dark"} />
-                <View style={styles(theme).scrollContent}>
-                    {/* Header Skeleton */}
-                    <View style={styles(theme).header}>
+            <View style={[st.container, { backgroundColor: theme.colors.background }]}>
+                <StatusBar style={isDark ? 'light' : 'dark'} />
+                <View style={st.scroll}>
+                    <View style={st.header}>
                         <View>
-                            <Skeleton width={120} height={16} style={{ marginBottom: 8 }} />
-                            <Skeleton width={200} height={32} />
+                            <Skeleton width={100} height={14} style={{ marginBottom: 8 }} />
+                            <Skeleton width={180} height={30} />
                         </View>
-                        <Skeleton width={48} height={48} borderRadius={24} />
+                        <Skeleton width={44} height={44} borderRadius={22} />
                     </View>
-
-                    {/* Hero Skeleton */}
-                    <View style={[styles(theme).heroSection, { height: 250, justifyContent: 'center' }]}>
-                        <Skeleton width={160} height={160} borderRadius={80} />
+                    <Skeleton width="100%" height={260} borderRadius={32} style={{ marginBottom: 24 }} />
+                    <View style={st.statsRow}>
+                        <Skeleton width="30%" height={110} borderRadius={28} />
+                        <Skeleton width="30%" height={110} borderRadius={28} />
+                        <Skeleton width="30%" height={110} borderRadius={28} />
                     </View>
-
-                    {/* Stats Skeleton */}
-                    <View style={styles(theme).statsRow}>
-                        <Skeleton width="30%" height={80} borderRadius={20} />
-                        <Skeleton width="30%" height={80} borderRadius={20} />
-                        <Skeleton width="30%" height={80} borderRadius={20} />
-                    </View>
-
-                    {/* Actions Skeleton */}
-                    <Skeleton width={150} height={24} style={{ marginBottom: 16 }} />
-                    <View style={styles(theme).actionGrid}>
-                        <Skeleton width="100%" height={80} borderRadius={24} />
-                        <Skeleton width="100%" height={80} borderRadius={24} />
-                    </View>
+                    <Skeleton width={140} height={22} style={{ marginBottom: 16, marginTop: 8 }} />
+                    <Skeleton width="100%" height={76} borderRadius={24} style={{ marginBottom: 12 }} />
+                    <Skeleton width="100%" height={76} borderRadius={24} style={{ marginBottom: 12 }} />
+                    <Skeleton width="100%" height={76} borderRadius={24} style={{ marginBottom: 12 }} />
                 </View>
             </View>
         );
     }
 
     return (
-        <View style={styles(theme).container}>
-            <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[st.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar style={isDark ? 'light' : 'dark'} />
             <ScrollView
-                contentContainerStyle={styles(theme).scrollContent}
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={theme.colors.text} />}
+                contentContainerStyle={st.scroll}
+                refreshControl={
+                    <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={theme.colors.primary} />
+                }
+                showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <View style={styles(theme).header}>
+                {/* ── Header ─────────────────────────────────────────── */}
+                <Animated.View style={[st.header, headerAnim]}>
                     <View>
-                        <Text style={styles(theme).greeting}>Good Morning,</Text>
-                        <Text style={styles(theme).name}>{userName.charAt(0).toUpperCase() + userName.slice(1)}</Text>
+                        <Text style={[st.greeting, { color: theme.colors.textSecondary }]}>
+                            Good morning,
+                        </Text>
+                        <Text style={[st.name, { color: theme.colors.text }]}>{displayName}</Text>
                     </View>
-                    <HapticButton style={styles(theme).profileButton} onPress={() => navigation.navigate('Profile')}>
-                        <Ionicons name="person-circle-outline" size={40} color={theme.colors.textSecondary} />
+                    <HapticButton
+                        style={[st.profileBtn, {
+                            backgroundColor: theme.dark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.8)',
+                            borderColor: theme.dark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+                        }]}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        <View>
+                            <Ionicons name="person-outline" size={22} color={theme.colors.text} />
+                            <View style={[st.profileDot, { backgroundColor: theme.colors.primary }]} />
+                        </View>
                     </HapticButton>
-                </View>
+                </Animated.View>
 
-                {/* Hero: Consistency Ring */}
-                <View style={styles(theme).heroSection}>
+                {/* ── Hero card: Consistency Ring ─────────────────────── */}
+                <Card delay={100} style={st.heroCard}>
                     <ConsistencyRing score={score} theme={theme} />
+                    <Text style={[st.heroSubtitle, { color: theme.colors.textSecondary }]}>
+                        Today's Performance Score
+                    </Text>
+                </Card>
+
+                {/* ── Stats row ───────────────────────────────────────── */}
+                <View style={st.statsRow}>
+                    <StatCard
+                        label="Streak" value={streak} unit="Days"
+                        icon="flame" iconColor="#f97316"
+                        theme={theme} delay={200}
+                    />
+                    <StatCard
+                        label="Workouts" value={stats.workouts} unit="Done"
+                        icon="barbell" iconColor={theme.colors.warning}
+                        theme={theme} delay={280}
+                    />
+                    <StatCard
+                        label="Water" value={stats.water} unit="Cups"
+                        icon="water" iconColor={theme.colors.primary}
+                        theme={theme} delay={360}
+                    />
                 </View>
 
-                {/* Stats Row */}
-                <View style={styles(theme).statsRow}>
-                    <StatCard label="Streak" value={streak} unit="Days" theme={theme} />
-                    <StatCard label="Workouts" value={stats.workouts} unit="Session" theme={theme} />
-                    <StatCard label="Water" value={stats.water} unit="Cups" theme={theme} />
-                </View>
-
-                {/* Quick Actions */}
-                <Text style={styles(theme).sectionTitle}>Quick Logger</Text>
-                <View style={styles(theme).actionGrid}>
+                {/* ── Quick Logger ────────────────────────────────────── */}
+                <Text style={[st.sectionTitle, { color: theme.colors.text }]}>Quick Logger</Text>
+                <View style={st.actionGrid}>
                     <QuickAction
-                        label="Log Workout"
-                        icon="barbell"
-                        color={theme.colors.warning} // Amber for workouts
+                        label="Log Workout" icon="barbell"
+                        color={theme.colors.warning}
                         count={stats.workouts}
                         onPress={() => logAction('workout')}
-                        theme={theme}
+                        theme={theme} delay={440}
                     />
                     <QuickAction
-                        label="Log Meal"
-                        icon="restaurant"
-                        color={theme.colors.success} // Emerald for meals
+                        label="Log Meal" icon="restaurant"
+                        color={theme.colors.success}
                         count={stats.meals}
                         onPress={() => navigation.navigate('Meals')}
-                        theme={theme}
+                        theme={theme} delay={510}
                     />
                     <QuickAction
-                        label="Log Water"
-                        icon="water"
-                        color={theme.colors.primary} // Blue for water
+                        label="Log Water" icon="water"
+                        color={theme.colors.primary}
                         count={stats.water}
                         onPress={() => logAction('water')}
-                        theme={theme}
+                        theme={theme} delay={580}
                     />
                     <QuickAction
-                        label="Log Sugar"
-                        icon="alert-circle"
-                        color={theme.colors.error} // Red for sugar
+                        label="Log Sugar" icon="alert-circle"
+                        color={theme.colors.error}
                         count={stats.cravings}
                         onPress={() => navigation.navigate('Sugar')}
-                        theme={theme}
+                        theme={theme} delay={650}
                     />
                 </View>
             </ScrollView>
@@ -206,147 +274,62 @@ export default function TodayScreen({ navigation }: any) {
     );
 }
 
-const styles = (theme: any) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-    },
-    scrollContent: {
-        padding: 24,
-        paddingTop: 60,
-        paddingBottom: 40,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 32,
-    },
-    greeting: {
-        fontSize: 16,
-        color: theme.colors.textSecondary,
-        fontWeight: '500',
-    },
-    name: {
-        fontSize: 28,
-        color: theme.colors.text,
-        fontWeight: '700',
-    },
-    profileButton: {
-        padding: 4,
-    },
-    heroSection: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 40,
-        backgroundColor: theme.colors.card,
-        borderRadius: 32,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 12,
-        elevation: 2,
+// ─── Static styles (theme-independent layout) ──────────────────────────────
+const st = StyleSheet.create({
+    container: { flex: 1 },
+    scroll: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 },
+
+    // Header
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
+    greeting: { fontSize: 15, fontWeight: '500', marginBottom: 2 },
+    name: { fontSize: 32, fontWeight: '800', letterSpacing: -0.5 }, // tracking-tight extrabold
+    profileBtn: {
+        width: 44, height: 44, borderRadius: 16,
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
     },
-    ringContainer: {
-        position: 'relative',
-        alignItems: 'center',
-        justifyContent: 'center',
+    profileDot: {
+        position: 'absolute', top: 0, right: 0,
+        width: 10, height: 10, borderRadius: 5,
+        borderWidth: 2, borderColor: 'transparent',
     },
-    scoreContent: {
-        position: 'absolute',
-        alignItems: 'center',
-    },
-    scoreText: {
-        fontSize: 36,
-        fontWeight: '800',
-        color: theme.colors.text,
-    },
-    scoreLabel: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 40,
-    },
+
+    // Hero
+    heroCard: { marginBottom: 20, alignItems: 'center' },
+    heroSubtitle: { fontSize: 13, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', marginTop: 12 },
+
+    // Ring
+    ringWrap: { alignItems: 'center', justifyContent: 'center' },
+    ringCenter: { position: 'absolute', alignItems: 'center' },
+    ringScore: { fontSize: 40, fontWeight: '800', letterSpacing: -1 },
+    ringLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginTop: 2 },
+
+    // Stat cards
+    statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28, gap: 10 },
     statCard: {
-        backgroundColor: theme.colors.card,
-        width: '30%',
-        padding: 16,
-        borderRadius: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 1,
+        flex: 1, padding: 16, borderRadius: 28,
         borderWidth: 1,
-        borderColor: theme.colors.border,
-    },
-    statValue: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: theme.colors.text,
-    },
-    statUnit: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        marginTop: 2,
-    },
-    statLabel: {
-        fontSize: 10,
-        color: theme.colors.textSecondary,
-        marginTop: 8,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: theme.colors.text,
-        marginBottom: 16,
-    },
-    actionGrid: {
-        gap: 16,
-    },
-    actionButton: {
-        width: '100%',
-        backgroundColor: theme.colors.card,
-        padding: 16,
-        borderRadius: 24,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.07, shadowRadius: 16, elevation: 2,
         alignItems: 'center',
-        flexDirection: 'row',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
     },
-    iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
+    statIconBox: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+    statValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
+    statUnit: { fontSize: 11, fontWeight: '600', marginTop: 1 },
+    statLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 6 },
+
+    // Actions
+    sectionTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 14 },
+    actionGrid: { gap: 12 },
+    actionBtn: {
+        flexDirection: 'row', alignItems: 'center', padding: 18,
+        borderRadius: 24, borderWidth: 1,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
     },
-    actionLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.text,
-    },
-    actionCount: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        marginTop: 2
-    }
+    actionIconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+    actionLabel: { fontSize: 16, fontWeight: '600' },
+    actionCount: { fontSize: 12, marginTop: 2 },
 });

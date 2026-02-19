@@ -1,293 +1,288 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, Alert, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { NotificationService } from '../services/NotificationService';
 import { useTheme } from '@repo/ui';
+import { HapticButton } from '../components/ui';
+import Animated, {
+    useSharedValue,
+    withSpring,
+    withDelay,
+    withTiming,
+    useAnimatedStyle,
+    Easing,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
-export default function ProfileScreen() {
-    const { user, signOut } = useAuth();
-    const { theme, mode, setMode } = useTheme();
+const NOTIFICATION_PREFS_DEFAULT = {
+    workout: true,
+    craving: true,
+    walk: true,
+    streak: true,
+};
 
-    const [prefs, setPrefs] = useState({
-        workout: true,
-        craving: true,
-        walk: true,
-        streak: true
-    });
+type PrefKey = keyof typeof NOTIFICATION_PREFS_DEFAULT;
 
-    useEffect(() => {
-        const init = async () => {
-            const granted = await NotificationService.registerForPushNotificationsAsync();
-            if (granted) {
-                NotificationService.setupDefaultNotifications(prefs);
-            }
-        };
-        init();
-    }, []);
-
-    const toggleNotification = (key: keyof typeof prefs) => {
-        const newPrefs = { ...prefs, [key]: !prefs[key] };
-        setPrefs(newPrefs);
-        NotificationService.setupDefaultNotifications(newPrefs);
-    };
-
-    const userName = user?.email?.split('@')[0] || "User";
-
-    const handleSignOut = async () => {
-        try {
-            await signOut();
-        } catch (error) {
-            Alert.alert("Error", "Failed to sign out");
-        }
-    };
-
-    const SettingItem = ({ icon, label, onPress, color = theme.colors.textSecondary }: any) => (
-        <TouchableOpacity style={styles(theme).settingRow} onPress={onPress}>
-            <View style={styles(theme).settingLeft}>
-                <View style={[styles(theme).iconBox, { backgroundColor: theme.colors.background }]}>
-                    <Ionicons name={icon} size={20} color={color} />
-                </View>
-                <Text style={styles(theme).settingLabel}>{label}</Text>
+// ─── Setting row ──────────────────────────────────────────────────────────────
+const SettingRow = ({ icon, label, onPress, iconBg, iconColor, sublabel, danger = false, theme }: any) => (
+    <HapticButton style={st.settingRow} onPress={onPress} hapticType={Haptics.ImpactFeedbackStyle.Light}>
+        <View style={st.settingLeft}>
+            <View style={[st.settingIcon, { backgroundColor: iconBg }]}>
+                <Ionicons name={icon} size={20} color={iconColor} />
             </View>
-            <Ionicons name="chevron-forward" size={16} color={theme.colors.border} />
-        </TouchableOpacity>
-    );
+            <View>
+                <Text style={[st.settingLabel, { color: danger ? theme.colors.error : theme.colors.text }]}>
+                    {label}
+                </Text>
+                {sublabel && (
+                    <Text style={[st.settingSubLabel, { color: theme.colors.textMuted }]}>{sublabel}</Text>
+                )}
+            </View>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+    </HapticButton>
+);
 
-    const NotificationToggle = ({ label, value, onToggle }: any) => (
-        <View style={styles(theme).toggleRow}>
-            <Text style={styles(theme).toggleLabel}>{label}</Text>
+// ─── Toggle row ───────────────────────────────────────────────────────────────
+const ToggleRow = ({ label, sublabel, value, onToggle, theme, divider = true }: any) => (
+    <>
+        <View style={st.settingRow}>
+            <View style={{ flex: 1 }}>
+                <Text style={[st.settingLabel, { color: theme.colors.text }]}>{label}</Text>
+                {sublabel && <Text style={[st.settingSubLabel, { color: theme.colors.textMuted }]}>{sublabel}</Text>}
+            </View>
             <Switch
                 trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
-                thumbColor={value ? theme.colors.primary : "#f4f3f4"}
+                thumbColor={value ? theme.colors.primary : '#f4f3f4'}
                 onValueChange={onToggle}
                 value={value}
             />
         </View>
-    );
+        {divider && <View style={[st.divider, { backgroundColor: theme.colors.border }]} />}
+    </>
+);
 
-    const ThemeOption = ({ label, value, current }: any) => (
-        <TouchableOpacity
-            style={[
-                styles(theme).themeOption,
-                current === value && { backgroundColor: theme.colors.primaryLight, borderColor: theme.colors.primary }
-            ]}
-            onPress={() => setMode(value)}
-        >
-            <Text style={[
-                styles(theme).themeText,
-                current === value && { color: theme.colors.primary, fontWeight: '700' }
-            ]}>{label}</Text>
-        </TouchableOpacity>
-    );
+// ─── Screen ──────────────────────────────────────────────────────────────────
+export default function ProfileScreen() {
+    const { user, signOut } = useAuth();
+    const { theme, isDark, mode, setMode } = useTheme();
+    const [prefs, setPrefs] = useState(NOTIFICATION_PREFS_DEFAULT);
+
+    const bgGlass = isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.75)';
+    const borderGlass = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+
+    useEffect(() => {
+        const init = async () => {
+            const granted = await NotificationService.registerForPushNotificationsAsync();
+            if (granted) NotificationService.setupDefaultNotifications(prefs);
+        };
+        init();
+    }, []);
+
+    // Header entrance
+    const headerY = useSharedValue(20);
+    const headerOpacity = useSharedValue(0);
+    useEffect(() => {
+        headerY.value = withSpring(0, { damping: 18, stiffness: 100 });
+        headerOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+    }, []);
+    const headerAnim = useAnimatedStyle(() => ({
+        opacity: headerOpacity.value,
+        transform: [{ translateY: headerY.value }],
+    }));
+
+    const toggleNotification = (key: PrefKey) => {
+        const next = { ...prefs, [key]: !prefs[key] };
+        setPrefs(next);
+        NotificationService.setupDefaultNotifications(next);
+    };
+
+    const handleSignOut = async () => {
+        try { await signOut(); }
+        catch { Alert.alert('Error', 'Failed to sign out'); }
+    };
+
+    const userName = user?.email?.split('@')[0] || 'User';
+    const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
+    const THEME_OPTIONS: { label: string; value: 'system' | 'light' | 'dark'; icon: string }[] = [
+        { label: 'System', value: 'system', icon: 'phone-portrait-outline' },
+        { label: 'Light', value: 'light', icon: 'sunny-outline' },
+        { label: 'Dark', value: 'dark', icon: 'moon-outline' },
+    ];
 
     return (
-        <View style={styles(theme).container}>
-            <ScrollView contentContainerStyle={styles(theme).content}>
+        <View style={[st.container, { backgroundColor: theme.colors.background }]}>
+            <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
 
-                {/* Profile Header */}
-                <View style={styles(theme).header}>
-                    <View style={styles(theme).avatar}>
-                        <Text style={styles(theme).avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+                {/* ── Avatar header ─────────────────────── */}
+                <Animated.View style={[st.avatarSection, headerAnim]}>
+                    <View style={[st.avatar, {
+                        backgroundColor: theme.colors.primary,
+                        shadowColor: theme.colors.primary,
+                    }]}>
+                        <Text style={st.avatarLetter}>{displayName.charAt(0)}</Text>
                     </View>
-                    <Text style={styles(theme).name}>{userName}</Text>
-                    <Text style={styles(theme).email}>{user?.email}</Text>
-                    <View style={styles(theme).badge}>
-                        <Text style={styles(theme).badgeText}>PRO MEMBER</Text>
+                    <Text style={[st.name, { color: theme.colors.text }]}>{displayName}</Text>
+                    <Text style={[st.email, { color: theme.colors.textSecondary }]}>{user?.email}</Text>
+                    <View style={[st.badge, { backgroundColor: theme.colors.successLight }]}>
+                        <Text style={[st.badgeText, { color: theme.colors.success }]}>PRO MEMBER</Text>
+                    </View>
+                </Animated.View>
+
+                {/* ── Appearance ────────────────────────── */}
+                <Text style={[st.sectionLabel, { color: theme.colors.textSecondary }]}>APPEARANCE</Text>
+                <View style={[st.card, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
+                    <View style={st.themeRow}>
+                        {THEME_OPTIONS.map((opt, i) => {
+                            const active = mode === opt.value;
+                            return (
+                                <HapticButton
+                                    key={opt.value}
+                                    style={[st.themeBtn, {
+                                        backgroundColor: active
+                                            ? (isDark ? 'rgba(99,102,241,0.2)' : theme.colors.primaryLight)
+                                            : 'transparent',
+                                        borderColor: active ? theme.colors.primary : borderGlass,
+                                        borderWidth: active ? 1.5 : 1,
+                                    }]}
+                                    onPress={() => setMode(opt.value)}
+                                    hapticType={Haptics.ImpactFeedbackStyle.Light}
+                                >
+                                    <Ionicons
+                                        name={opt.icon as any}
+                                        size={18}
+                                        color={active ? theme.colors.primary : theme.colors.textSecondary}
+                                    />
+                                    <Text style={[st.themeLabel, {
+                                        color: active ? theme.colors.primary : theme.colors.textSecondary,
+                                        fontWeight: active ? '700' : '500',
+                                    }]}>
+                                        {opt.label}
+                                    </Text>
+                                </HapticButton>
+                            );
+                        })}
                     </View>
                 </View>
 
-                {/* Appearance */}
-                <Text style={styles(theme).sectionTitle}>Appearance</Text>
-                <View style={styles(theme).themeRow}>
-                    <ThemeOption label="System" value="system" current={mode} />
-                    <ThemeOption label="Light" value="light" current={mode} />
-                    <ThemeOption label="Dark" value="dark" current={mode} />
-                </View>
-
-                {/* Notifications */}
-                <Text style={styles(theme).sectionTitle}>Smart alerts</Text>
-                <View style={styles(theme).settingsCard}>
-                    <NotificationToggle
-                        label="Morning Workout (5 AM)"
+                {/* ── Notifications ─────────────────────── */}
+                <Text style={[st.sectionLabel, { color: theme.colors.textSecondary }]}>SMART ALERTS</Text>
+                <View style={[st.card, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
+                    <ToggleRow
+                        label="Morning Workout"
+                        sublabel="5:00 AM daily reminder"
                         value={prefs.workout}
                         onToggle={() => toggleNotification('workout')}
+                        theme={theme}
                     />
-                    <View style={styles(theme).divider} />
-                    <NotificationToggle
-                        label="Craving Watch (2 PM)"
+                    <ToggleRow
+                        label="Craving Watch"
+                        sublabel="2:00 PM check-in"
                         value={prefs.craving}
                         onToggle={() => toggleNotification('craving')}
+                        theme={theme}
                     />
-                    <View style={styles(theme).divider} />
-                    <NotificationToggle
-                        label="Evening Walk (6 PM)"
+                    <ToggleRow
+                        label="Evening Walk"
+                        sublabel="6:00 PM reminder"
                         value={prefs.walk}
                         onToggle={() => toggleNotification('walk')}
+                        theme={theme}
+                        divider={false}
                     />
                 </View>
 
-                {/* Account */}
-                <Text style={styles(theme).sectionTitle}>Account</Text>
-                <View style={styles(theme).settingsCard}>
-                    <SettingItem icon="card-outline" label="Subscription" onPress={() => { }} />
-                    <SettingItem icon="help-circle-outline" label="Support" onPress={() => { }} />
-
-                    <TouchableOpacity style={styles(theme).settingRow} onPress={handleSignOut}>
-                        <View style={styles(theme).settingLeft}>
-                            <View style={[styles(theme).iconBox, { backgroundColor: theme.colors.errorLight }]}>
-                                <Ionicons name="log-out-outline" size={20} color={theme.colors.error} />
-                            </View>
-                            <Text style={[styles(theme).settingLabel, { color: theme.colors.error }]}>Sign Out</Text>
-                        </View>
-                    </TouchableOpacity>
+                {/* ── Account ──────────────────────────── */}
+                <Text style={[st.sectionLabel, { color: theme.colors.textSecondary }]}>ACCOUNT</Text>
+                <View style={[st.card, { backgroundColor: bgGlass, borderColor: borderGlass }]}>
+                    <SettingRow
+                        icon="card-outline"
+                        label="Subscription"
+                        sublabel="Pro plan · Active"
+                        iconBg={isDark ? 'rgba(99,102,241,0.15)' : theme.colors.primaryLight}
+                        iconColor={theme.colors.primary}
+                        onPress={() => { }}
+                        theme={theme}
+                    />
+                    <View style={[st.divider, { backgroundColor: theme.colors.border }]} />
+                    <SettingRow
+                        icon="help-circle-outline"
+                        label="Support"
+                        sublabel="Get help or leave feedback"
+                        iconBg={isDark ? 'rgba(99,102,241,0.15)' : theme.colors.primaryLight}
+                        iconColor={theme.colors.primary}
+                        onPress={() => { }}
+                        theme={theme}
+                    />
+                    <View style={[st.divider, { backgroundColor: theme.colors.border }]} />
+                    <SettingRow
+                        icon="log-out-outline"
+                        label="Sign Out"
+                        iconBg={theme.colors.errorLight}
+                        iconColor={theme.colors.error}
+                        onPress={handleSignOut}
+                        danger
+                        theme={theme}
+                    />
                 </View>
 
-                <Text style={styles(theme).version}>Version 1.0.0</Text>
+                <Text style={[st.version, { color: theme.colors.textMuted }]}>FitTrack Pro · Version 1.0.0</Text>
 
             </ScrollView>
         </View>
     );
 }
 
-const styles = (theme: any) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: theme.colors.background,
-        paddingTop: 60,
-    },
-    content: {
-        paddingHorizontal: 24,
-        paddingBottom: 40,
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 32,
-    },
+const st = StyleSheet.create({
+    container: { flex: 1 },
+    content: { paddingTop: 60, paddingHorizontal: 24, paddingBottom: 48 },
+
+    // Avatar
+    avatarSection: { alignItems: 'center', marginBottom: 36 },
     avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: theme.colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        width: 88, height: 88, borderRadius: 44,
+        alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+        shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
     },
-    avatarText: {
-        fontSize: 32,
-        fontWeight: '700',
-        color: '#fff',
+    avatarLetter: { fontSize: 36, fontWeight: '800', color: '#fff' },
+    name: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+    email: { fontSize: 14, marginTop: 4, fontWeight: '500' },
+    badge: { marginTop: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12 },
+    badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+
+    // Section labels (uppercase, like web)
+    sectionLabel: {
+        fontSize: 12, fontWeight: '700', letterSpacing: 1.2,
+        marginBottom: 10, marginLeft: 4,
     },
-    name: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: theme.colors.text,
-        marginBottom: 4,
+
+    // Card
+    card: {
+        borderRadius: 28, borderWidth: 1, padding: 8, marginBottom: 28,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 24, elevation: 3,
     },
-    email: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-        marginBottom: 12,
+
+    // Theme buttons
+    themeRow: { flexDirection: 'row', gap: 8, padding: 8 },
+    themeBtn: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: 6, paddingVertical: 12, borderRadius: 18,
     },
-    badge: {
-        backgroundColor: theme.colors.successLight,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    badgeText: {
-        color: theme.colors.success,
-        fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-    },
-    sectionTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: theme.colors.textSecondary,
-        marginBottom: 12,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginLeft: 8,
-    },
-    settingsCard: {
-        backgroundColor: theme.colors.card,
-        borderRadius: 20,
-        padding: 8,
-        marginBottom: 32,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.03,
-        shadowRadius: 4,
-    },
+    themeLabel: { fontSize: 13 },
+
+    // Setting rows
     settingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingVertical: 14, paddingHorizontal: 12,
     },
-    settingLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    iconBox: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16,
-    },
-    settingLabel: {
-        fontSize: 16,
-        color: theme.colors.text,
-        fontWeight: '500',
-    },
-    toggleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-    toggleLabel: {
-        fontSize: 15,
-        color: theme.colors.text,
-        fontWeight: '500',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: theme.colors.border,
-        marginHorizontal: 16,
-    },
-    themeRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 32,
-        gap: 8,
-    },
-    themeOption: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 12,
-        backgroundColor: theme.colors.card,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        alignItems: 'center',
-    },
-    themeText: {
-        fontWeight: '600',
-        color: theme.colors.textSecondary,
-    },
-    version: {
-        textAlign: 'center',
-        color: theme.colors.textSecondary,
-        fontSize: 12,
-        marginBottom: 20,
-    },
+    settingLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    settingIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+    settingLabel: { fontSize: 15, fontWeight: '500' },
+    settingSubLabel: { fontSize: 12, marginTop: 1 },
+    divider: { height: 1, marginHorizontal: 12 },
+
+    version: { textAlign: 'center', fontSize: 12, marginTop: 8 },
 });
